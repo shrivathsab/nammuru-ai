@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Camera, Sparkles, Mail, Twitter } from 'lucide-react'
+import { Camera, Sparkles, Mail, X } from 'lucide-react'
 
 const steps = [
   {
@@ -31,7 +31,7 @@ const steps = [
   },
   {
     number: 4,
-    icon: Twitter,
+    icon: X,
     title: 'Generate Tweet',
     description: 'Thread crafted for social amplification.',
     badge: 'Coming soon',
