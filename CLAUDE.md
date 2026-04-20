@@ -37,3 +37,7 @@ Whitefield, HSR Layout, Koramangala, Indiranagar, Jayanagar
 - Severity timeline — Recharts LineChart
 - Live activity feed — Supabase Realtime
 - OG image per report — Next.js opengraph-image.tsx
+## Supabase RLS note
+## Always run these policies after creating any new table:
+## CREATE POLICY allow_read ON [table] FOR SELECT TO anon USING (true);
+## CREATE POLICY allow_insert ON [table] FOR INSERT TO anon WITH CHECK (true);
