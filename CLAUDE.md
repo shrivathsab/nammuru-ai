@@ -41,3 +41,11 @@ Whitefield, HSR Layout, Koramangala, Indiranagar, Jayanagar
 ## Always run these policies after creating any new table:
 ## CREATE POLICY allow_read ON [table] FOR SELECT TO anon USING (true);
 ## CREATE POLICY allow_insert ON [table] FOR INSERT TO anon WITH CHECK (true);
+
+## Jurisdiction detection (added Day 3)
+## Layer 1: lib/jurisdictionCheck.ts — known exclusion polygon check (sync)
+## Layer 2: detectPrivateProperty() — Google Places API 30m radius check (async)
+## Layer 3: Claude Vision detects private property signage in image
+## Rule: NEVER block submission on jurisdiction uncertainty — flag and reroute only
+## Fallback: if non-BBMP detected, route email to authority_email from jurisdictionResult
+## If all checks uncertain: route to grievance@bbmp.gov.in with jurisdiction note in email
