@@ -60,6 +60,7 @@ function normaliseResponse(raw: Partial<ClassifyResponse>): ClassifyResponse {
     ward_is_fallback:          raw.ward_is_fallback          ?? false,
     locality_name:             raw.locality_name             ?? null,
     location_details:          raw.location_details          ?? null,
+    nearest_landmark:          raw.nearest_landmark          ?? null,
     private_property_detected: raw.private_property_detected ?? false,
     jurisdiction_flag:         raw.jurisdiction_flag         ?? null,
   }
