@@ -100,6 +100,7 @@ export interface ClassifyResponse {
   private_property_detected: boolean;
   jurisdiction_flag: JurisdictionFlag | null;
   location_verified: boolean | null;
+  report_hash: string | null;
 }
 
 // ─── Supabase generated types (minimal — extend as schema grows) ───────────────

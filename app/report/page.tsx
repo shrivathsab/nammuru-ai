@@ -66,6 +66,7 @@ function normaliseResponse(raw: Partial<ClassifyResponse>): ClassifyResponse {
     private_property_detected: raw.private_property_detected ?? false,
     jurisdiction_flag:         raw.jurisdiction_flag         ?? null,
     location_verified:         raw.location_verified         ?? null,
+    report_hash:               raw.report_hash               ?? null,
   }
 }
 
@@ -251,6 +252,34 @@ export default function ReportPage() {
       setStep('preview')
     }
   }, [imageDataUrl, coords, manualLocation])
+
+  // ── Persist draft to sessionStorage for /report/email ─────────────────────
+
+  useEffect(() => {
+    if (step !== 'result' || !analysisResult?.is_valid || !coords) return
+
+    const draft = {
+      issue_type:               analysisResult.issue_type,
+      severity:                 analysisResult.severity,
+      triage_level:             analysisResult.triage_level,
+      triage_label:             analysisResult.triage_label,
+      description:              analysisResult.description,
+      locality:                 analysisResult.location_details?.locality ?? analysisResult.locality_name ?? '',
+      ward_name:                analysisResult.ward_name,
+      ward_zone:                analysisResult.ward_zone,
+      nearest_landmark:         analysisResult.nearest_landmark,
+      pincode:                  analysisResult.location_details?.pincode ?? null,
+      lat:                      coords.lat,
+      lng:                      coords.lng,
+      cluster_count:            analysisResult.cluster?.cluster_count ?? 0,
+      cluster_suggested_action: analysisResult.cluster?.suggested_action ?? null,
+      report_hash:              analysisResult.report_hash ?? '',
+      manual_location:          manualLocation,
+      captured_at:              new Date().toISOString(),
+    }
+
+    sessionStorage.setItem('nammuru_report_draft', JSON.stringify(draft))
+  }, [step, analysisResult, coords, manualLocation])
 
   // ── Reset ─────────────────────────────────────────────────────────────────
 
@@ -870,12 +899,13 @@ export default function ReportPage() {
 
                   {/* Actions */}
                   <div className="flex flex-col gap-3 mt-2">
-                    <button
+                    <Link
+                      href="/report/email"
                       className="w-full flex items-center justify-center gap-2 rounded-xl font-semibold text-white text-base"
                       style={{ backgroundColor: '#0F6E56', minHeight: '52px' }}
                     >
                       Submit Report
-                    </button>
+                    </Link>
                     <button
                       onClick={reportAnother}
                       className="w-full flex items-center justify-center gap-2 rounded-xl font-semibold text-gray-700 text-base border border-gray-300 bg-white"

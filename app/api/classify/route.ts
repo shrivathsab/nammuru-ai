@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
+import { createHash } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { isInsideBengaluru } from '@/lib/geofence';
@@ -268,6 +269,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         private_property_detected: false,
         jurisdiction_flag: jurisdictionFlag,
         location_verified: manual_location ? false : true,
+        report_hash: null,
       } satisfies ClassifyResponse);
     }
 
@@ -293,6 +295,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         private_property_detected: false,
         jurisdiction_flag: jurisdictionFlag,
         location_verified: manual_location ? false : true,
+        report_hash: null,
       } satisfies ClassifyResponse);
     }
 
@@ -357,6 +360,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       suggested_action: suggestedAction,
     };
 
+    const report_hash = createHash('sha256')
+      .update(`${image_base64}:${lat}:${lng}`)
+      .digest('hex');
+
     return NextResponse.json({
       is_valid: true,
       user_message: claudeResult.user_message,
@@ -378,8 +385,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       private_property_detected: claudeResult.private_property_detected || jurisdictionFlag.likely_private,
       jurisdiction_flag: jurisdictionFlag,
       location_verified: manual_location ? false : true,
+      report_hash,
     } satisfies ClassifyResponse);
-  } catch {
+  } catch (err) {
+    console.error('classify route error:', err);
     return NextResponse.json(
       { is_valid: false, user_message: 'Something went wrong. Please try again.' },
       { status: 500 },
