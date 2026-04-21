@@ -16,20 +16,8 @@ import {
   Users,
   Search,
 } from 'lucide-react'
-import ExifReader from 'exifreader'
 import { resizeImage } from '@/lib/imageResize'
 import type { ClassifyResponse } from '@/lib/types'
-
-async function hasValidCameraExif(file: File): Promise<boolean> {
-  try {
-    const tags = await ExifReader.load(file)
-    const hasGPS = !!(tags['GPSLatitude'] && tags['GPSLongitude'])
-    const hasCameraMake = !!tags['Make']?.description
-    return hasGPS || hasCameraMake
-  } catch {
-    return true
-  }
-}
 
 const REJECTION_MESSAGES: Record<string, string> = {
   screenshot: 'Please submit a direct photo, not a photo of a screen.',
@@ -137,7 +125,6 @@ export default function ReportPage() {
   const [imageDataUrl, setImageDataUrl]             = useState<string | null>(null)
   const [analysisResult, setAnalysisResult]         = useState<ClassifyResponse | null>(null)
   const [analyzeError, setAnalyzeError]             = useState<string | null>(null)
-  const [exifWarning, setExifWarning]               = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -237,9 +224,6 @@ export default function ReportPage() {
   const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-
-    const looksLikeRealPhoto = await hasValidCameraExif(file)
-    setExifWarning(!looksLikeRealPhoto)
 
     const reader = new FileReader()
     reader.onload = () => {
@@ -670,6 +654,13 @@ export default function ReportPage() {
                 onChange={handleFileChange}
               />
 
+              {!isMobile && (
+                <p className="text-xs text-gray-400 mt-1">
+                  Desktop: upload a real photo of the issue taken on-site.
+                  Screenshots and stock images will be rejected by AI verification.
+                </p>
+              )}
+
               <div className="w-full flex flex-col gap-3">
                 <button
                   onClick={openCamera}
@@ -709,22 +700,6 @@ export default function ReportPage() {
               {analyzeError && (
                 <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">
                   {analyzeError}
-                </div>
-              )}
-
-              {exifWarning && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
-                  <span className="text-amber-600 text-sm flex-1">
-                    This image doesn't appear to be taken directly from a camera.
-                    If you're testing on desktop, dismiss and continue.
-                    For real reports, please use your phone camera to photograph the issue.
-                  </span>
-                  <button
-                    onClick={() => setExifWarning(false)}
-                    className="text-amber-400 hover:text-amber-600 text-xs shrink-0"
-                  >
-                    Dismiss
-                  </button>
                 </div>
               )}
 
