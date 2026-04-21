@@ -1,252 +1,494 @@
+'use client'
+
 import Link from 'next/link'
-import { MapPin, FileText, Building2, Mail, Zap } from 'lucide-react'
-import { getServerClient } from '@/lib/supabase'
+import {
+  MapPin,
+  Building2,
+  Camera,
+  Bot,
+  Mail,
+  ArrowRight,
+  AlertTriangle,
+  Clock,
+  CheckCircle,
+  Scale,
+  Navigation,
+  RotateCcw,
+  XCircle,
+  CheckCircle2,
+} from 'lucide-react'
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function timeAgo(dateString: string): string {
-  const seconds = Math.floor(
-    (new Date().getTime() - new Date(dateString).getTime()) / 1000
-  )
-  if (seconds < 60) return `${seconds}s ago`
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
-  return `${Math.floor(seconds / 86400)}d ago`
-}
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-interface PageStats {
-  total_reports: number
-  emails_sent: number
-  recent_reports: number
-  recent_activity: {
-    ward_name: string
-    issue_type: string
-    created_at: string
-  }[]
-}
-
-// ─── Data fetching ────────────────────────────────────────────────────────────
-
-async function fetchStats(): Promise<PageStats> {
-  const defaults: PageStats = {
-    total_reports: 0,
-    emails_sent: 0,
-    recent_reports: 0,
-    recent_activity: [],
+export default function HomePage() {
+  const scrollToHowItWorks = (e: React.MouseEvent<HTMLAnchorElement>): void => {
+    e.preventDefault()
+    document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })
   }
-
-  try {
-    const supabase = getServerClient()
-    const sevenDaysAgo = new Date(
-      Date.now() - 7 * 24 * 60 * 60 * 1000
-    ).toISOString()
-
-    const [totalRes, emailsRes, recentRes, activityRes] = await Promise.all([
-      supabase
-        .from('reports')
-        .select('*', { count: 'exact', head: true }),
-      supabase
-        .from('reports')
-        .select('*', { count: 'exact', head: true })
-        .not('email_draft', 'is', null),
-      supabase
-        .from('reports')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', sevenDaysAgo),
-      supabase
-        .from('reports')
-        .select('ward_name, issue_type, created_at')
-        .order('created_at', { ascending: false })
-        .limit(3),
-    ])
-
-    if (
-      totalRes.error ||
-      emailsRes.error ||
-      recentRes.error ||
-      activityRes.error
-    ) {
-      return defaults
-    }
-
-    return {
-      total_reports: totalRes.count ?? 0,
-      emails_sent: emailsRes.count ?? 0,
-      recent_reports: recentRes.count ?? 0,
-      recent_activity: activityRes.data ?? [],
-    }
-  } catch {
-    return defaults
-  }
-}
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
-export default async function HomePage() {
-  const stats = await fetchStats()
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-
-      {/* ── Navigation ─────────────────────────────────────────────────── */}
-      <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+    <main className="min-h-screen bg-white text-gray-900">
+      {/* ─── SECTION 1 — HERO ─────────────────────────────────────── */}
+      <section className="relative overflow-hidden bg-[#0a1a14] text-white">
+        {/* Nav */}
+        <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
           <div>
-            <span className="text-xl font-bold" style={{ color: '#0F6E56' }}>
+            <div className="text-lg font-bold tracking-tight text-[#0F6E56] sm:text-xl">
               NammuruAI
-            </span>
-            <p className="text-xs text-gray-400 leading-tight mt-0.5">
-              ನಮ್ಮ ಊರಿಗಾಗಿ AI — Civic accountability for Bengaluru
-            </p>
+            </div>
+            <div className="text-[11px] text-gray-400">ನಮ್ಮ ಊರು</div>
           </div>
           <Link
             href="/report"
-            className="text-sm font-medium text-white rounded-lg px-4 py-2 transition-opacity hover:opacity-90"
-            style={{ backgroundColor: '#0F6E56' }}
+            className="rounded-full bg-[#0F6E56] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#0d5f4a] sm:px-5"
           >
-            Report an Issue
+            File a Report →
           </Link>
-        </div>
-      </nav>
+        </nav>
 
-      {/* ── Hero ───────────────────────────────────────────────────────── */}
-      <section className="bg-white border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-4 py-20 md:py-28 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 leading-tight tracking-tight">
-            Your city.{' '}
-            <span style={{ color: '#0F6E56' }}>Your voice.</span>{' '}
-            AI&#8209;powered.
+        {/* Hero content */}
+        <div className="mx-auto max-w-4xl px-5 pb-24 pt-12 text-center sm:px-8 sm:pt-20">
+          <span className="inline-flex items-center rounded-full border border-[#0F6E56]/40 bg-[#0F6E56]/10 px-3 py-1 text-xs font-medium text-[#4ade97]">
+            Bengaluru's First AI Civic Platform
+          </span>
+
+          <h1 className="mt-6 text-4xl font-bold leading-tight tracking-tight text-white sm:text-5xl md:text-6xl">
+            Report civic issues.
+            <br />
+            <span className="text-[#0F6E56]">Claude fixes the paperwork.</span>
           </h1>
-          <p className="text-lg text-gray-500 max-w-xl mx-auto mt-4">
-            Transforming civic complaints into official action using artificial
-            intelligence.
+
+          <p className="mx-auto mt-6 max-w-2xl text-base text-gray-300 sm:text-lg">
+            Capture a photo. AI verifies, classifies, and drafts a formal legal
+            letter to your BBMP ward officer — in 30 seconds.
+          </p>
+
+          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
+            <Link
+              href="/report"
+              className="inline-flex w-full items-center justify-center rounded-full bg-[#0F6E56] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#0d5f4a] sm:w-auto"
+            >
+              Report an Issue →
+            </Link>
+            <a
+              href="#how-it-works"
+              onClick={scrollToHowItWorks}
+              className="inline-flex w-full items-center justify-center rounded-full border border-white/30 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10 sm:w-auto"
+            >
+              See How It Works
+            </a>
+          </div>
+
+          <div className="mt-10 flex flex-col items-center justify-center gap-3 text-xs text-gray-400 sm:flex-row sm:gap-6 sm:text-sm">
+            <span className="inline-flex items-center gap-1.5">
+              <CheckCircle className="h-4 w-4 text-[#0F6E56]" />
+              28 BVT tests passing
+            </span>
+            <span className="hidden sm:inline">·</span>
+            <span className="inline-flex items-center gap-1.5">
+              <Building2 className="h-4 w-4 text-[#0F6E56]" />
+              5 BBMP pilot wards
+            </span>
+            <span className="hidden sm:inline">·</span>
+            <span className="inline-flex items-center gap-1.5">
+              <CheckCircle className="h-4 w-4 text-[#0F6E56]" />
+              ₹0 to file a report
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── SECTION 2 — HOW IT WORKS ─────────────────────────────── */}
+      <section id="how-it-works" className="bg-gray-50 px-5 py-20 sm:px-8">
+        <div className="mx-auto max-w-6xl">
+          <h2 className="text-center text-3xl font-bold tracking-tight sm:text-4xl">
+            Three steps. Thirty seconds.
+          </h2>
+
+          <div className="mt-14 grid grid-cols-1 items-start gap-6 md:grid-cols-[1fr_auto_1fr_auto_1fr]">
+            <StepCard
+              icon={<Camera className="h-6 w-6" />}
+              emoji="📸"
+              title="Capture"
+              body="Point your camera at the issue. GPS auto-detects your ward."
+            />
+            <ArrowRight className="mx-auto hidden h-6 w-6 text-[#0F6E56] md:block" />
+            <StepCard
+              icon={<Bot className="h-6 w-6" />}
+              emoji="🤖"
+              title="AI Verifies"
+              body="Claude Vision validates the image, classifies the issue, and assigns triage level."
+            />
+            <ArrowRight className="mx-auto hidden h-6 w-6 text-[#0F6E56] md:block" />
+            <StepCard
+              icon={<Mail className="h-6 w-6" />}
+              emoji="✉️"
+              title="Draft & Send"
+              body="A formal legal letter is drafted to your BBMP ward officer with statutory references."
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* ─── SECTION 3 — AI VALIDATION GATE ───────────────────────── */}
+      <section className="bg-white px-5 py-20 sm:px-8">
+        <div className="mx-auto max-w-5xl">
+          <h2 className="text-center text-3xl font-bold tracking-tight sm:text-4xl">
+            Every report is verified before it reaches BBMP.
+          </h2>
+          <p className="mt-3 text-center text-base text-gray-600">
+            Claude Vision rejects invalid submissions automatically.
+          </p>
+
+          <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2">
+            {/* Rejected */}
+            <div className="rounded-xl border border-gray-200 border-l-4 border-l-red-500 bg-white p-6 shadow-sm">
+              <div className="flex items-center gap-2 text-lg font-semibold text-red-600">
+                <XCircle className="h-5 w-5" />
+                Rejected
+              </div>
+              <div className="mt-4 flex h-40 items-center justify-center rounded-lg bg-gray-100 text-sm text-gray-500">
+                Screenshot detected
+              </div>
+              <div className="mt-4">
+                <span className="inline-flex rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
+                  screenshot
+                </span>
+              </div>
+              <p className="mt-3 text-sm text-gray-700">
+                Please submit a direct photo of the issue, not a photo of a screen.
+              </p>
+            </div>
+
+            {/* Accepted */}
+            <div className="rounded-xl border border-gray-200 border-l-4 border-l-[#0F6E56] bg-white p-6 shadow-sm">
+              <div className="flex items-center gap-2 text-lg font-semibold text-[#0F6E56]">
+                <CheckCircle2 className="h-5 w-5" />
+                Verified
+              </div>
+              <div className="mt-4 flex h-40 items-center justify-center rounded-lg bg-gray-100 text-sm text-gray-500">
+                Real outdoor photo
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Pill tone="teal">Pothole</Pill>
+                <Pill tone="amber">High Severity</Pill>
+                <Pill tone="red">URGENT L1</Pill>
+              </div>
+              <div className="mt-4 space-y-1.5 text-sm text-gray-700">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-gray-500" />
+                  HSR Layout, Bengaluru
+                </div>
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-gray-500" />
+                  HSR Layout Ward · Bommanahalli Zone
+                </div>
+                <div className="text-xs text-gray-500">94% confidence</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── SECTION 4 — EMAIL DRAFT PREVIEW ──────────────────────── */}
+      <section className="bg-[#0F6E56] px-5 py-20 text-white sm:px-8">
+        <div className="mx-auto max-w-3xl">
+          <h2 className="text-center text-3xl font-bold tracking-tight sm:text-4xl">
+            Claude drafts the legal letter. You just hit send.
+          </h2>
+
+          <div className="relative mt-12 overflow-hidden rounded-xl bg-white text-gray-900 shadow-2xl">
+            <div className="space-y-2 border-b border-gray-200 px-6 py-4 text-sm">
+              <div>
+                <span className="font-semibold text-gray-500">TO:</span>{' '}
+                Ward Officer, HSR Layout Ward &lt;hsrlayout.ward@bbmp.gov.in&gt;
+              </div>
+              <div>
+                <span className="font-semibold text-gray-500">CC:</span>{' '}
+                grievance@bbmp.gov.in
+              </div>
+              <div>
+                <span className="font-semibold text-gray-500">SUBJECT:</span>{' '}
+                [Report NMR-20260421-A7F3] URGENT: Pothole at HSR Layout — Action Required
+              </div>
+              <div className="text-xs text-gray-500">
+                ವರದಿ NMR-20260421-A7F3: HSR Layoutದಲ್ಲಿ Pothole — ತಕ್ಷಣ ಕ್ರಮ ಅಗತ್ಯ
+              </div>
+            </div>
+
+            <div className="px-6 py-5">
+              <span className="inline-flex rounded-full bg-[#0F6E56]/10 px-3 py-1 text-xs font-semibold text-[#0F6E56]">
+                NMR-20260421-A7F3
+              </span>
+
+              <div className="relative mt-4 text-sm leading-relaxed text-gray-800">
+                <p>Dear Ward Officer,</p>
+                <p className="mt-3">
+                  I write to formally report a High Severity pothole at HSR
+                  Layout, Bengaluru (GPS: 12.9116, 77.6370). This matter is
+                  filed under Report ID NMR-20260421-A7F3 via the NammuruAI
+                  civic platform...
+                </p>
+                <p className="mt-3 text-gray-600">
+                  [BBMP Act 1976 Section 58 reference...]
+                </p>
+                <div className="mt-4 text-xs italic text-gray-500">...continues</div>
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white to-transparent" />
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <OutlinePill icon={<Scale className="h-4 w-4" />}>
+              Cites BBMP Act 1976
+            </OutlinePill>
+            <OutlinePill icon={<Navigation className="h-4 w-4" />}>
+              GPS coordinates included
+            </OutlinePill>
+            <OutlinePill icon={<RotateCcw className="h-4 w-4" />}>
+              RTI escalation path
+            </OutlinePill>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── SECTION 5 — TRIAGE ───────────────────────────────────── */}
+      <section className="bg-gray-50 px-5 py-20 sm:px-8">
+        <div className="mx-auto max-w-6xl">
+          <h2 className="text-center text-3xl font-bold tracking-tight sm:text-4xl">
+            AI assigns urgency. Officers know what to fix first.
+          </h2>
+
+          <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-3">
+            <TriageCard
+              tone="red"
+              badge="Level 1 · URGENT"
+              sla="48-hour response required"
+              issues="Potholes (high severity), Encroachments, 10+ cluster reports"
+              icon={<AlertTriangle className="h-6 w-6 text-red-600" />}
+            />
+            <TriageCard
+              tone="amber"
+              badge="Level 2 · MEDIUM"
+              sla="7-day response required"
+              issues="Garbage, Streetlights (medium severity), 3–9 cluster reports"
+              icon={<Clock className="h-6 w-6 text-amber-600" />}
+            />
+            <TriageCard
+              tone="teal"
+              badge="Level 3 · ROUTINE"
+              sla="Maintenance schedule"
+              issues="Minor repairs, low severity, isolated incidents"
+              icon={<CheckCircle className="h-6 w-6 text-[#0F6E56]" />}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* ─── SECTION 6 — WARD COVERAGE ────────────────────────────── */}
+      <section className="bg-white px-5 py-20 sm:px-8">
+        <div className="mx-auto max-w-4xl text-center">
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            Pilot coverage: 5 BBMP wards
+          </h2>
+          <p className="mt-3 text-base text-gray-600">
+            Expanding to all 198 wards post-launch.
+          </p>
+
+          <div className="mt-10 flex flex-wrap justify-center gap-3">
+            {[
+              { name: 'HSR Layout', zone: 'Bommanahalli' },
+              { name: 'Koramangala', zone: 'South' },
+              { name: 'Indiranagar', zone: 'East' },
+              { name: 'Whitefield', zone: 'East' },
+              { name: 'Jayanagar', zone: 'South' },
+            ].map((w) => (
+              <div
+                key={w.name}
+                className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm"
+              >
+                <span className="font-semibold text-gray-900">{w.name}</span>
+                <span className="text-gray-500"> · {w.zone}</span>
+              </div>
+            ))}
+          </div>
+
+          <p className="mt-8 text-sm text-gray-500">
+            Outside these wards? Reports are routed to BBMP Grievance Cell.
+          </p>
+        </div>
+      </section>
+
+      {/* ─── SECTION 7 — STATS ────────────────────────────────────── */}
+      <section className="bg-[#0a1a14] px-5 py-16 text-white sm:px-8">
+        <div className="mx-auto grid max-w-5xl grid-cols-2 gap-8 text-center md:grid-cols-4">
+          <Stat value="5" label="Pilot Wards" />
+          <Stat value="3" label="Triage Levels" />
+          <Stat value="48h" label="L1 Response SLA" />
+          <Stat value="1" label="Claude API call per report" />
+        </div>
+      </section>
+
+      {/* ─── SECTION 8 — CTA FOOTER ───────────────────────────────── */}
+      <section className="bg-[#0F6E56] px-5 py-20 text-center text-white sm:px-8">
+        <div className="mx-auto max-w-3xl">
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            See a civic issue? Report it now.
+          </h2>
+          <p className="mt-3 text-base text-white/80">
+            Takes 30 seconds. Claude handles the rest.
           </p>
           <Link
             href="/report"
-            className="inline-block mt-8 text-white font-semibold text-lg px-8 py-4 rounded-xl transition-transform hover:scale-105"
-            style={{ backgroundColor: '#0F6E56' }}
+            className="mt-8 inline-flex items-center justify-center rounded-full bg-white px-8 py-4 text-base font-semibold text-[#0F6E56] shadow-lg transition hover:bg-gray-50"
           >
-            Report Now →
+            File a Report →
           </Link>
+          <p className="mt-6 text-xs text-white/70">
+            Free · No account required · Bengaluru only
+          </p>
         </div>
       </section>
 
-      {/* ── Stats Grid ─────────────────────────────────────────────────── */}
-      <section className="max-w-6xl mx-auto w-full px-4 py-10">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard
-            icon={<FileText size={18} style={{ color: '#0F6E56' }} />}
-            value={stats.total_reports}
-            label="Total Reports"
-          />
-          <StatCard
-            icon={<Building2 size={18} style={{ color: '#0F6E56' }} />}
-            value={5}
-            label="Wards Covered"
-          />
-          <StatCard
-            icon={<Mail size={18} style={{ color: '#0F6E56' }} />}
-            value={stats.emails_sent}
-            label="Emails Sent"
-          />
-          <StatCard
-            icon={<Zap size={18} style={{ color: '#0F6E56' }} />}
-            value={stats.recent_reports}
-            label="Active This Week"
-          />
-        </div>
-      </section>
-
-      {/* ── Map + Feed ─────────────────────────────────────────────────── */}
-      <section className="max-w-6xl mx-auto w-full px-4 pb-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-          {/* Heatmap placeholder */}
-          <div
-            className="rounded-xl p-6 flex flex-col items-center justify-center text-center"
-            style={{
-              border: '2px dashed #0F6E56',
-              minHeight: '300px',
-            }}
-          >
-            <MapPin size={32} style={{ color: '#0F6E56' }} />
-            <h3 className="mt-3 text-lg font-semibold text-gray-800">
-              Live Issue Map
-            </h3>
-            <p className="mt-1 text-sm text-gray-500 max-w-xs">
-              Coming soon — real-time heatmap of Bengaluru civic issues
-            </p>
+      {/* ─── FOOTER ───────────────────────────────────────────────── */}
+      <footer className="bg-[#0a1a14] px-5 py-12 text-gray-300 sm:px-8">
+        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 md:grid-cols-3">
+          <div>
+            <div className="text-lg font-bold text-[#0F6E56]">NammuruAI</div>
+            <div className="text-xs text-gray-400">ನಮ್ಮ ಊರು</div>
+            <p className="mt-3 text-sm">Built for Bengaluru citizens.</p>
           </div>
-
-          {/* Activity feed */}
-          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">
-                Recent Reports
-              </h3>
-              <span
-                className="w-2 h-2 rounded-full animate-pulse"
-                style={{ backgroundColor: '#0F6E56' }}
-              />
+          <div className="flex flex-col gap-2 text-sm md:items-center">
+            <Link href="/report" className="hover:text-white">
+              Report an Issue
+            </Link>
+            <a href="#how-it-works" onClick={scrollToHowItWorks} className="hover:text-white">
+              How It Works
+            </a>
+            <Link href="/about" className="hover:text-white">
+              About
+            </Link>
+          </div>
+          <div className="text-sm md:text-right">
+            <div className="font-semibold text-white">Built with Claude AI</div>
+            <div className="mt-1 text-xs text-gray-400">
+              Powered by Anthropic's Claude
             </div>
-
-            {stats.recent_activity.length === 0 ? (
-              <p className="text-sm text-gray-400 py-8 text-center">
-                No reports yet — be the first!
-              </p>
-            ) : (
-              <ul className="divide-y divide-gray-100">
-                {stats.recent_activity.map((item, i) => (
-                  <li key={i} className="py-3 flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-semibold text-gray-800">
-                        {item.issue_type}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {item.ward_name}
-                      </p>
-                    </div>
-                    <span className="text-xs text-gray-400 whitespace-nowrap pt-0.5">
-                      {timeAgo(item.created_at)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <div className="mt-1 text-xs text-gray-400">Day 3 of 14</div>
           </div>
         </div>
-      </section>
-
-      {/* ── Footer ─────────────────────────────────────────────────────── */}
-      <footer className="mt-auto border-t border-gray-100 py-8 text-center">
-        <p className="text-sm text-gray-400">
-          Built with Claude AI · Open source · #NammuruAI
-        </p>
+        <div className="mx-auto mt-10 max-w-6xl border-t border-white/10 pt-6 text-center text-xs text-gray-500">
+          © 2026 NammuruAI · Not affiliated with BBMP · Civic tech for public good
+        </div>
       </footer>
+    </main>
+  )
+}
+
+// ─── Subcomponents ──────────────────────────────────────────────
+
+function StepCard({
+  icon,
+  emoji,
+  title,
+  body,
+}: {
+  icon: React.ReactNode
+  emoji: string
+  title: string
+  body: string
+}) {
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div className="flex items-center gap-3">
+        <span className="text-2xl" aria-hidden>
+          {emoji}
+        </span>
+        <span className="text-[#0F6E56]">{icon}</span>
+      </div>
+      <h3 className="mt-4 text-lg font-semibold">{title}</h3>
+      <p className="mt-2 text-sm text-gray-600">{body}</p>
     </div>
   )
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+function Pill({
+  tone,
+  children,
+}: {
+  tone: 'teal' | 'amber' | 'red'
+  children: React.ReactNode
+}) {
+  const cls =
+    tone === 'teal'
+      ? 'bg-[#0F6E56]/10 text-[#0F6E56]'
+      : tone === 'amber'
+      ? 'bg-amber-100 text-amber-800'
+      : 'bg-red-100 text-red-700'
+  return (
+    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${cls}`}>
+      {children}
+    </span>
+  )
+}
 
-function StatCard({
+function OutlinePill({
   icon,
-  value,
-  label,
+  children,
 }: {
   icon: React.ReactNode
-  value: number
-  label: string
+  children: React.ReactNode
 }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-      <div className="mb-2">{icon}</div>
-      <p className="text-3xl font-bold" style={{ color: '#0F6E56' }}>
-        {value}
-      </p>
-      <p className="text-sm text-gray-500 mt-1">{label}</p>
+    <span className="inline-flex items-center gap-2 rounded-full border border-white/40 px-4 py-1.5 text-sm text-white">
+      {icon}
+      {children}
+    </span>
+  )
+}
+
+function TriageCard({
+  tone,
+  badge,
+  sla,
+  issues,
+  icon,
+}: {
+  tone: 'red' | 'amber' | 'teal'
+  badge: string
+  sla: string
+  issues: string
+  icon: React.ReactNode
+}) {
+  const borderCls =
+    tone === 'red'
+      ? 'border-l-red-500'
+      : tone === 'amber'
+      ? 'border-l-amber-500'
+      : 'border-l-[#0F6E56]'
+  const badgeCls =
+    tone === 'red'
+      ? 'bg-red-100 text-red-700'
+      : tone === 'amber'
+      ? 'bg-amber-100 text-amber-800'
+      : 'bg-[#0F6E56]/10 text-[#0F6E56]'
+  return (
+    <div className={`rounded-xl border border-gray-200 border-l-4 ${borderCls} bg-white p-6 shadow-sm`}>
+      <div className="flex items-center justify-between">
+        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${badgeCls}`}>
+          {badge}
+        </span>
+        {icon}
+      </div>
+      <div className="mt-4 text-sm font-semibold text-gray-900">{sla}</div>
+      <p className="mt-2 text-sm text-gray-600">{issues}</p>
+    </div>
+  )
+}
+
+function Stat({ value, label }: { value: string; label: string }) {
+  return (
+    <div>
+      <div className="text-4xl font-bold text-[#0F6E56] sm:text-5xl">{value}</div>
+      <div className="mt-2 text-xs text-white/80 sm:text-sm">{label}</div>
     </div>
   )
 }
