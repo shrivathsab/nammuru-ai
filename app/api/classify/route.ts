@@ -235,12 +235,34 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
               text: `MISUSE DETECTION — evaluate ALL of the following before classifying:
 
 CHECK 1 — SCREEN CAPTURE:
-Look for: screen bezel, monitor stand, keyboard or desk at edges, moire
-patterns, pixel grid, screen glare or backlight bleed, UI elements or
-status bars from another device, scan lines, image photographed at an
-angle against a flat glowing surface, unnatural colour flatness.
+Only flag as screenshot if you have HIGH CONFIDENCE based on MULTIPLE
+corroborating signals present simultaneously. A single ambiguous signal
+is NOT sufficient to reject.
+
+Strong signals (2+ required to reject):
+- Screen bezel, monitor frame, or keyboard/desk surface clearly visible
+  at the edges of the image
+- Moire interference pattern (repeating grid/wave pattern) visible
+  across a significant portion of the image
+- Clear screen glare or reflection of a room/person on the surface
+- UI elements, status bars, app chrome, or watermarks from another device
+  clearly overlaid on the image
+- Image is visibly photographed at an angle against a flat glowing surface
+  with visible curvature or parallax
+
+Weak signals — do NOT reject on these alone:
+- Slight compression artifacts (common in WhatsApp/email shared photos)
+- Colour flatness (common on overcast days or in shade)
+- Slight blur or low resolution (older phones)
+- High brightness or washed-out look (direct sunlight)
+- Image appears "too clean" or "too dark"
+
+When in doubt, do NOT reject. Let the civic content check decide.
+Real photos with minor quality issues are valid submissions.
+
+Only if 2+ strong signals are simultaneously present:
 → is_valid: false, rejection_reason: "screenshot"
-→ user_message: "Please submit a direct photo, not a photo of a screen."
+→ user_message: "This image appears to be a photo of a screen. Please submit a direct photo of the issue."
 
 CHECK 2 — AI GENERATED IMAGE:
 Look for: unnaturally perfect symmetry, painterly texture, inconsistent

@@ -715,8 +715,9 @@ export default function ReportPage() {
               {exifWarning && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
                   <span className="text-amber-600 text-sm flex-1">
-                    This image may be a screenshot or photo of a screen.
-                    For best results, use your camera to photograph the issue directly.
+                    This image doesn't appear to be taken directly from a camera.
+                    If you're testing on desktop, dismiss and continue.
+                    For real reports, please use your phone camera to photograph the issue.
                   </span>
                   <button
                     onClick={() => setExifWarning(false)}
