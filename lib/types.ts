@@ -99,6 +99,7 @@ export interface ClassifyResponse {
   nearest_landmark: string | null;
   private_property_detected: boolean;
   jurisdiction_flag: JurisdictionFlag | null;
+  location_verified: boolean | null;
 }
 
 // ─── Supabase generated types (minimal — extend as schema grows) ───────────────

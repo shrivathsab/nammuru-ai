@@ -154,10 +154,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const { image_base64, lat, lng } = body as {
+    const { image_base64, lat, lng, manual_location } = body as {
       image_base64: string;
       lat: number;
       lng: number;
+      manual_location?: boolean;
     };
 
     // CHECK 2: Geofence
@@ -266,6 +267,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         nearest_landmark: privatePropertyCheck.nearest_landmark ?? null,
         private_property_detected: false,
         jurisdiction_flag: jurisdictionFlag,
+        location_verified: manual_location ? false : true,
       } satisfies ClassifyResponse);
     }
 
@@ -290,6 +292,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         nearest_landmark: privatePropertyCheck.nearest_landmark ?? null,
         private_property_detected: false,
         jurisdiction_flag: jurisdictionFlag,
+        location_verified: manual_location ? false : true,
       } satisfies ClassifyResponse);
     }
 
@@ -374,6 +377,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       nearest_landmark: privatePropertyCheck.nearest_landmark ?? null,
       private_property_detected: claudeResult.private_property_detected || jurisdictionFlag.likely_private,
       jurisdiction_flag: jurisdictionFlag,
+      location_verified: manual_location ? false : true,
     } satisfies ClassifyResponse);
   } catch {
     return NextResponse.json(
