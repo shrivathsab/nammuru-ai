@@ -94,6 +94,11 @@ async function getLocationDetails(lat: number, lng: number): Promise<LocationDet
   }
 }
 
+// Valid rejection reasons:
+// irrelevant_content | indoor_scene | portrait | obscene | non_civic
+// screenshot | low_confidence | outside_geofence | parse_error
+// ai_generated | reposted_media | no_location_context | implausible_scene
+
 // ─── Claude system prompt ─────────────────────────────────────────────────────
 
 function buildSystemPrompt(localityName: string): string {
@@ -107,7 +112,7 @@ PRIVATE PROPERTY: If the image shows clear signage indicating private property (
 
 FACES: Incidental background people are fine. Reject only if a human face is the clear primary subject.
 
-Return ONLY this JSON: { "is_valid": boolean, "rejection_reason": "irrelevant_content"|"indoor_scene"|"portrait"|"obscene"|"non_civic"|"screenshot"|"low_confidence"|null, "issue_type": "Pothole"|"Garbage"|"Broken Streetlight"|"Encroachment"|"Waterlogging"|"Other"|null, "severity": "low"|"medium"|"high"|null, "confidence": number 0.0-1.0, "description": string describing the issue in one sentence|null, "user_message": string shown to user, "private_property_detected": boolean }
+Return ONLY this JSON: { "is_valid": boolean, "rejection_reason": "irrelevant_content"|"indoor_scene"|"portrait"|"obscene"|"non_civic"|"screenshot"|"low_confidence"|"ai_generated"|"reposted_media"|"no_location_context"|"implausible_scene"|null, "issue_type": "Pothole"|"Garbage"|"Broken Streetlight"|"Encroachment"|"Waterlogging"|"Other"|null, "severity": "low"|"medium"|"high"|null, "confidence": number 0.0-1.0, "description": string describing the issue in one sentence|null, "user_message": string shown to user, "private_property_detected": boolean }
 
 Rules:
 - is_valid false: issue_type/severity/description are null
@@ -227,7 +232,71 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             },
             {
               type: 'text',
-              text: `Validate and classify this image reported from ${locationDetails.locality}, Bengaluru (coordinates: ${lat}, ${lng}).\n\nIn your description field, describe ONLY what you physically observe in the image — the condition, severity, and impact. Do NOT mention the locality name or any place name in the description. The location is displayed separately in the UI.\n\nGood example: "Illegal encroachment blocking the footpath with construction waste and debris, creating a public hazard."\n\nBad example: "Illegal encroachment in Mahadevapura blocking the footpath..." ← do not do this\n\nReturn only the JSON.`,
+              text: `MISUSE DETECTION — evaluate ALL of the following before classifying:
+
+CHECK 1 — SCREEN CAPTURE:
+Look for: screen bezel, monitor stand, keyboard or desk at edges, moire
+patterns, pixel grid, screen glare or backlight bleed, UI elements or
+status bars from another device, scan lines, image photographed at an
+angle against a flat glowing surface, unnatural colour flatness.
+→ is_valid: false, rejection_reason: "screenshot"
+→ user_message: "Please submit a direct photo, not a photo of a screen."
+
+CHECK 2 — AI GENERATED IMAGE:
+Look for: unnaturally perfect symmetry, painterly texture, inconsistent
+shadows or light sources, impossible geometry, watermarks from image
+generators, overly clean surfaces with no real-world wear, faces or
+figures that look rendered, backgrounds that blur unnaturally.
+→ is_valid: false, rejection_reason: "ai_generated"
+→ user_message: "This image appears to be AI-generated. Please submit a real photograph."
+
+CHECK 3 — WHATSAPP/REPOSTED IMAGE:
+Look for: heavy compression artifacts, watermarks or channel names
+overlaid (e.g. WhatsApp, Telegram, news logos), date/time stamps from
+another app, caption text burned into the image, aspect ratio typical
+of forwarded media (very wide or very narrow), low resolution
+inconsistent with a modern phone camera.
+→ is_valid: false, rejection_reason: "reposted_media"
+→ user_message: "This appears to be a forwarded or reposted image. Please submit a fresh photo you took yourself."
+
+CHECK 4 — NO LOCATION CONTEXT:
+Look for: extreme close-up with no surrounding environment visible,
+impossible to determine if this is outdoors or indoors, no road
+surface, sky, buildings, or landmarks visible anywhere in the frame.
+→ is_valid: false, rejection_reason: "no_location_context"
+→ user_message: "Please step back and capture the issue with its surroundings visible."
+
+CHECK 5 — INDOOR SCENE:
+Look for: ceiling, indoor flooring, walls, furniture, indoor lighting.
+Civic issues must be outdoors in a public space.
+→ is_valid: false, rejection_reason: "indoor_scene"
+→ user_message: "This appears to be an indoor photo. Please photograph the issue from a public outdoor location."
+
+CHECK 6 — PRIVATE PROPERTY SIGNS:
+Look for: "Private Property", "No Trespassing", "Private Road",
+"Residents Only", compound walls of gated communities, visible
+security booths, corporate campus signage.
+→ is_valid: true (do not block), set private_property_detected: true
+→ user_message: "This may be on private property. Your report will be reviewed before routing."
+
+CHECK 7 — STAGED OR IMPLAUSIBLE SCENE:
+Look for: debris or objects arranged unnaturally, civic issue that
+appears deliberately placed rather than organically occurring,
+inconsistency between the reported issue and the surroundings
+(e.g. a single piece of garbage on an otherwise pristine road).
+If strongly suspicious:
+→ is_valid: false, rejection_reason: "implausible_scene"
+→ user_message: "This image does not appear to show a genuine civic issue."
+
+CHECK 8 — NON-CIVIC CONTENT:
+Portraits, selfies, animals, food, vehicles without civic context,
+commercial signage, political content, obscene content.
+→ is_valid: false, rejection_reason: "non_civic"
+→ user_message: "Please submit a photo of a civic issue such as a pothole, garbage, or broken infrastructure."
+
+Only proceed to civic classification if ALL checks above pass.
+
+Validate and classify this image reported from ${locationDetails.locality}, Bengaluru (coordinates: ${lat}, ${lng}).\n\nIn your description field, describe ONLY what you physically observe in the image — the condition, severity, and impact. Do NOT mention the locality name or any place name in the description. The location is displayed separately in the UI.\n\nGood example: "Illegal encroachment blocking the footpath with construction waste and debris, creating a public hazard."\n\nBad example: "Illegal encroachment in Mahadevapura blocking the footpath..." ← do not do this\n\nReturn only the JSON.`,
             },
           ],
         },

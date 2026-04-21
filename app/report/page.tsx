@@ -16,8 +16,36 @@ import {
   Users,
   Search,
 } from 'lucide-react'
+import ExifReader from 'exifreader'
 import { resizeImage } from '@/lib/imageResize'
 import type { ClassifyResponse } from '@/lib/types'
+
+async function hasValidCameraExif(file: File): Promise<boolean> {
+  try {
+    const tags = await ExifReader.load(file)
+    const hasGPS = !!(tags['GPSLatitude'] && tags['GPSLongitude'])
+    const hasCameraMake = !!tags['Make']?.description
+    return hasGPS || hasCameraMake
+  } catch {
+    return true
+  }
+}
+
+const REJECTION_MESSAGES: Record<string, string> = {
+  screenshot: 'Please submit a direct photo, not a photo of a screen.',
+  ai_generated: 'This image appears to be AI-generated. Please submit a real photograph.',
+  reposted_media: 'This appears to be a forwarded or reposted image. Please submit a fresh photo you took yourself.',
+  no_location_context: 'Please step back and capture the issue with its surroundings visible.',
+  indoor_scene: 'This appears to be an indoor photo. Please photograph the issue from a public outdoor location.',
+  implausible_scene: 'This image does not appear to show a genuine civic issue.',
+  non_civic: 'Please submit a photo of a civic issue such as a pothole, garbage, or broken infrastructure.',
+  obscene: 'This image cannot be accepted.',
+  portrait: 'Please submit a photo of a civic issue, not a person.',
+  low_confidence: 'We could not clearly identify a civic issue in this photo. Please try again with a clearer image.',
+  outside_geofence: 'This location is outside the BBMP jurisdiction area covered by NammuruAI.',
+  parse_error: 'Something went wrong analysing your image. Please try again.',
+  irrelevant_content: 'This image does not appear to show a civic issue.',
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -45,9 +73,12 @@ function severityClasses(severity: string): string {
 
 /** Normalise partial API error payloads into a full ClassifyResponse shape. */
 function normaliseResponse(raw: Partial<ClassifyResponse>): ClassifyResponse {
+  const userMessage = raw.user_message ||
+    REJECTION_MESSAGES[raw.rejection_reason ?? ''] ||
+    'Unable to process this image. Please try again.'
   return {
     is_valid:         raw.is_valid         ?? false,
-    user_message:     raw.user_message     ?? 'Something went wrong. Please try again.',
+    user_message:     userMessage,
     issue_type:       raw.issue_type       ?? null,
     severity:         raw.severity         ?? null,
     triage_level:     raw.triage_level     ?? null,
@@ -106,6 +137,7 @@ export default function ReportPage() {
   const [imageDataUrl, setImageDataUrl]             = useState<string | null>(null)
   const [analysisResult, setAnalysisResult]         = useState<ClassifyResponse | null>(null)
   const [analyzeError, setAnalyzeError]             = useState<string | null>(null)
+  const [exifWarning, setExifWarning]               = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -202,9 +234,13 @@ export default function ReportPage() {
 
   // ── Camera / file ─────────────────────────────────────────────────────────
 
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+
+    const looksLikeRealPhoto = await hasValidCameraExif(file)
+    setExifWarning(!looksLikeRealPhoto)
+
     const reader = new FileReader()
     reader.onload = () => {
       setImageDataUrl(reader.result as string)
@@ -673,6 +709,21 @@ export default function ReportPage() {
               {analyzeError && (
                 <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">
                   {analyzeError}
+                </div>
+              )}
+
+              {exifWarning && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
+                  <span className="text-amber-600 text-sm flex-1">
+                    This image may be a screenshot or photo of a screen.
+                    For best results, use your camera to photograph the issue directly.
+                  </span>
+                  <button
+                    onClick={() => setExifWarning(false)}
+                    className="text-amber-400 hover:text-amber-600 text-xs shrink-0"
+                  >
+                    Dismiss
+                  </button>
                 </div>
               )}
 

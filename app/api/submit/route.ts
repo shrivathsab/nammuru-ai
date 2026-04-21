@@ -108,6 +108,22 @@ export async function POST(request: NextRequest): Promise<NextResponse<SubmitRes
       auth: { persistSession: false, autoRefreshToken: false },
     })
 
+    const { count } = await supabase
+      .from('reports')
+      .select('id', { count: 'exact', head: true })
+      .gte('lat', body.lat - 0.00045)
+      .lte('lat', body.lat + 0.00045)
+      .gte('lng', body.lng - 0.00055)
+      .lte('lng', body.lng + 0.00055)
+      .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+
+    if ((count ?? 0) >= 5) {
+      return NextResponse.json(
+        { success: false, error: 'Too many reports from this location in the last 24 hours.' },
+        { status: 429 },
+      )
+    }
+
     const insertPayload: ReportInsert = {
       lat: body.lat,
       lng: body.lng,
