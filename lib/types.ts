@@ -103,6 +103,71 @@ export interface ClassifyResponse {
   report_hash: string | null;
 }
 
+// ─── Draft Content (email + tweet) ────────────────────────────────────────────
+
+export interface TweetContent {
+  primary: string;
+  reply_evidence: string;
+  reply_escalation: string;
+}
+
+export interface DraftContentRequest {
+  issue_type: string;
+  severity: string;
+  triage_level: number;
+  triage_label: string;
+  description: string;
+  locality: string;
+  ward_name: string;
+  ward_zone: string;
+  nearest_landmark: string | null;
+  pincode: string | null;
+  lat: number;
+  lng: number;
+  cluster_count: number;
+  cluster_suggested_action: string | null;
+  report_hash: string;
+}
+
+export interface DraftContentResponse {
+  // Email fields
+  subject: string;
+  subject_kannada: string;
+  body: string;
+  recipient_name: string;
+  recipient_email: string;
+  cc_emails: string[];
+  report_id: string;
+  google_maps_url: string;
+  // Tweet fields
+  tweet: TweetContent;
+}
+
+// ─── Public Report (for public report page) ───────────────────────────────────
+
+export interface PublicReport {
+  id: string;
+  report_id_human: string;
+  report_hash: string;
+  created_at: string;
+  issue_type: string;
+  severity: string;
+  triage_level: number;
+  description: string;
+  locality_name: string | null;
+  ward_name: string;
+  lat: number;
+  lng: number;
+  status: string;
+  email_subject: string | null;
+  tweet_primary: string | null;
+  tweet_reply_evidence: string | null;
+  tweet_reply_escalation: string | null;
+  cluster_count: number;
+  nearest_landmark: string | null;
+  pincode: string | null;
+}
+
 // ─── Supabase generated types (minimal — extend as schema grows) ───────────────
 
 export interface Database {

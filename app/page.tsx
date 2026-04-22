@@ -1,494 +1,734 @@
 'use client'
 
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import {
+  Camera,
+  Shield,
+  FileText,
   MapPin,
   Building2,
-  Camera,
-  Bot,
-  Mail,
-  ArrowRight,
   AlertTriangle,
   Clock,
   CheckCircle,
-  Scale,
-  Navigation,
-  RotateCcw,
-  XCircle,
-  CheckCircle2,
+  Globe,
+  Monitor,
+  Menu,
+  X,
+  ChevronDown,
 } from 'lucide-react'
 
+const TEAL = '#0F6E56'
+const TEAL_LIGHT = '#1a9b78'
+const DARK = '#080f0c'
+const DARK2 = '#0e1a15'
+const DARK3 = '#162118'
+const CREAM = '#f5f0e8'
+const GOLD = '#d4a843'
+const RED = '#e53e3e'
+const AMBER = '#d97706'
+const TEXT_PRIMARY = '#f0ede8'
+const TEXT_MUTED = '#8a9e96'
+
+const EMAIL_BODY =
+  `Dear Ward Officer,\n\nI write to formally report a High Severity pothole located at HSR Layout, Bengaluru (GPS: 12.9116, 77.6370). This matter is filed under Report ID NMR-20260421-A7F3 via the NammuruAI civic platform and is publicly documented.\n\nUnder BBMP Act 1976 Section 58, your office is legally obligated to maintain roads within your ward jurisdiction...`
+
+// ─── Sub-components ──────────────────────────────────────────────
+
+function ConfidenceBar() {
+  const [animate, setAnimate] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setAnimate(true) }, { threshold: 0.5 })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+  return (
+    <div ref={ref} style={{ height: '4px', background: 'rgba(0,0,0,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+      <div style={{ height: '100%', background: TEAL, borderRadius: '2px', width: animate ? '94%' : '0%', transition: animate ? 'width 1.2s ease-out 0.3s' : 'none' }} />
+    </div>
+  )
+}
+
+function CountUpStat({ target, label, active }: { target: number; label: string; active: boolean }) {
+  const [count, setCount] = useState(0)
+  const started = useRef(false)
+  useEffect(() => {
+    if (!active || started.current) return
+    started.current = true
+    const dur = 1500
+    const t0 = performance.now()
+    const tick = (now: number) => {
+      const p = Math.min((now - t0) / dur, 1)
+      const eased = 1 - Math.pow(1 - p, 3)
+      setCount(Math.round(eased * target))
+      if (p < 1) requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  }, [active, target])
+  return (
+    <div style={{ textAlign: 'center' }}>
+      <div className="font-display" style={{ fontSize: '3.5rem', fontWeight: 700, color: TEAL, lineHeight: 1 }}>{count}</div>
+      <div style={{ color: TEXT_MUTED, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '0.5rem' }}>{label}</div>
+    </div>
+  )
+}
+
+function StatStatic({ value, label }: { value: string; label: string }) {
+  return (
+    <div style={{ textAlign: 'center' }}>
+      <div className="font-display" style={{ fontSize: '3.5rem', fontWeight: 700, color: TEAL, lineHeight: 1 }}>{value}</div>
+      <div style={{ color: TEXT_MUTED, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '0.5rem' }}>{label}</div>
+    </div>
+  )
+}
+
+// ─── Main page ───────────────────────────────────────────────────
+
 export default function HomePage() {
-  const scrollToHowItWorks = (e: React.MouseEvent<HTMLAnchorElement>): void => {
+  const [navScrolled, setNavScrolled] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [typedText, setTypedText] = useState('')
+  const [typingDone, setTypingDone] = useState(false)
+  const [emailInView, setEmailInView] = useState(false)
+  const [statsInView, setStatsInView] = useState(false)
+
+  const emailRef = useRef<HTMLElement>(null)
+  const statsRef = useRef<HTMLElement>(null)
+  const charRef = useRef(0)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Navbar scroll
+  useEffect(() => {
+    const fn = () => setNavScrolled(window.scrollY > 20)
+    window.addEventListener('scroll', fn, { passive: true })
+    return () => window.removeEventListener('scroll', fn)
+  }, [])
+
+  // Scroll reveal
+  useEffect(() => {
+    const obs = new IntersectionObserver(
+      (entries) => entries.forEach((e) => { if (e.isIntersecting) e.target.classList.add('visible') }),
+      { threshold: 0.12 }
+    )
+    document.querySelectorAll('.reveal').forEach((el) => obs.observe(el))
+    return () => obs.disconnect()
+  }, [])
+
+  // Email in-view
+  useEffect(() => {
+    const el = emailRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setEmailInView(true) }, { threshold: 0.3 })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+
+  // Stats in-view
+  useEffect(() => {
+    const el = statsRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setStatsInView(true) }, { threshold: 0.3 })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+
+  // Typewriter
+  useEffect(() => {
+    if (!emailInView || typingDone) return
+    timerRef.current = setInterval(() => {
+      charRef.current += 3
+      if (charRef.current >= EMAIL_BODY.length) {
+        setTypedText(EMAIL_BODY)
+        setTypingDone(true)
+        if (timerRef.current) clearInterval(timerRef.current)
+      } else {
+        setTypedText(EMAIL_BODY.slice(0, charRef.current))
+      }
+    }, 50)
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
+  }, [emailInView, typingDone])
+
+  const scrollToSection = (id: string) => (e: React.MouseEvent) => {
     e.preventDefault()
-    document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
   }
 
   return (
-    <main className="min-h-screen bg-white text-gray-900">
-      {/* ─── SECTION 1 — HERO ─────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-[#0a1a14] text-white">
-        {/* Nav */}
-        <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
-          <div>
-            <div className="text-lg font-bold tracking-tight text-[#0F6E56] sm:text-xl">
-              NammuruAI
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'DM Sans', sans-serif; }
+        .font-display { font-family: 'Playfair Display', serif !important; }
+        .font-mono-jet { font-family: 'JetBrains Mono', monospace !important; }
+
+        /* Reveal */
+        .reveal { opacity: 0; transform: translateY(24px); }
+        .reveal.visible { animation: fadeInUp 0.65s ease-out forwards; }
+
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(24px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Hero stagger */
+        .h1 { animation: fadeInUp 0.6s ease-out 0ms both; }
+        .h2 { animation: fadeInUp 0.6s ease-out 120ms both; }
+        .h3 { animation: fadeInUp 0.6s ease-out 240ms both; }
+        .h4 { animation: fadeInUp 0.6s ease-out 360ms both; }
+        .h5 { animation: fadeInUp 0.6s ease-out 480ms both; }
+
+        /* Mesh drift */
+        @keyframes drift1 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(40px,-30px); } }
+        @keyframes drift2 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-30px,40px); } }
+        .drift1 { animation: drift1 14s ease-in-out infinite; }
+        .drift2 { animation: drift2 17s ease-in-out infinite; }
+
+        /* Pulse */
+        @keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.5; transform:scale(1.4); } }
+        .pulse { animation: pulse 2s ease-in-out infinite; }
+
+        /* Blink cursor */
+        @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
+        .blink { animation: blink 1s step-end infinite; }
+
+        /* Bounce */
+        @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
+        .bounce { animation: bounce 1.6s ease-in-out infinite; }
+
+        /* Arrow pulse */
+        @keyframes arrowPulse { 0%,100% { opacity:1; } 50% { opacity:0.35; } }
+        .arrow-pulse { animation: arrowPulse 1.8s ease-in-out infinite; }
+
+        /* Nav underline */
+        .nav-link { position: relative; text-decoration: none; }
+        .nav-link::after { content:''; display:block; height:1px; background:${TEAL}; transform:scaleX(0); transform-origin:left; transition:transform 0.3s ease; }
+        .nav-link:hover::after { transform:scaleX(1); }
+
+        /* Card hover */
+        .card-lift { transition: transform 0.22s ease, box-shadow 0.22s ease; }
+        .card-lift:hover { transform: translateY(-4px); box-shadow: 0 20px 50px rgba(0,0,0,0.25); }
+
+        /* Glow CTA */
+        .btn-glow { transition: box-shadow 0.2s ease, background 0.2s ease; }
+        .btn-glow:hover { box-shadow: 0 0 22px rgba(15,110,86,0.45); background: ${TEAL_LIGHT} !important; }
+
+        /* White CTA */
+        .btn-white { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .btn-white:hover { transform: scale(1.02); box-shadow: 0 8px 32px rgba(0,0,0,0.22); }
+
+        /* Noise overlay */
+        .noise::before { content:''; position:absolute; inset:0; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); opacity:0.03; pointer-events:none; }
+
+        /* Responsive helpers */
+        .hide-mobile { display: none; }
+        .show-mobile { display: block; }
+        @media (min-width: 768px) {
+          .hide-mobile { display: flex; }
+          .show-mobile { display: none; }
+        }
+        .steps-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+        @media (min-width: 900px) { .steps-grid { grid-template-columns: 1fr auto 1fr auto 1fr; align-items: start; } }
+        .step-arrow { display: none; align-items: center; justify-content: center; align-self: center; color: ${TEAL}; font-size: 1.75rem; }
+        @media (min-width: 900px) { .step-arrow { display: flex; } }
+        .two-col { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+        @media (min-width: 640px) { .two-col { grid-template-columns: 1fr 1fr; } }
+        .three-col { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+        @media (min-width: 768px) { .three-col { grid-template-columns: repeat(3, 1fr); } }
+        .four-col { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem; }
+        @media (min-width: 768px) { .four-col { grid-template-columns: repeat(4, 1fr); } }
+        .footer-grid { display: grid; grid-template-columns: 1fr; gap: 2.5rem; text-align: center; }
+        @media (min-width: 768px) { .footer-grid { grid-template-columns: repeat(3, 1fr); text-align: left; } }
+        .ward-grid { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; }
+        .info-bar { display: flex; flex-direction: column; gap: 0.75rem; }
+        @media (min-width: 640px) { .info-bar { flex-direction: row; align-items: center; justify-content: space-between; } }
+
+        /* Footer link hover */
+        .footer-link { color: ${TEXT_MUTED}; text-decoration: none; font-size: 0.875rem; transition: color 0.2s; }
+        .footer-link:hover { color: ${TEAL}; }
+
+        /* City card link hover */
+        .city-link { text-decoration: none; font-size: 0.875rem; font-weight: 500; border-bottom: 1px solid transparent; transition: border-color 0.2s; }
+        .city-link-teal { color: ${TEAL}; }
+        .city-link-teal:hover { border-color: ${TEAL}; }
+        .city-link-gold { color: ${GOLD}; }
+        .city-link-gold:hover { border-color: ${GOLD}; }
+      `}</style>
+
+      <main style={{ background: DARK, color: TEXT_PRIMARY, fontFamily: "'DM Sans', sans-serif" }}>
+
+        {/* ── NAVBAR ─────────────────────────────────────────────── */}
+        <nav style={{
+          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
+          backdropFilter: navScrolled ? 'blur(12px)' : 'none',
+          background: navScrolled ? 'rgba(8,15,12,0.88)' : 'transparent',
+          borderBottom: `1px solid ${navScrolled ? 'rgba(15,110,86,0.2)' : 'transparent'}`,
+          transition: 'all 0.3s ease',
+        }}>
+          <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px' }}>
+            <div>
+              <div className="font-display" style={{ color: TEAL, fontSize: '1.25rem', fontWeight: 700 }}>NammuruAI</div>
+              <div style={{ color: TEXT_MUTED, fontSize: '0.65rem', letterSpacing: '0.15em' }}>ನಮ್ಮ ಊರು</div>
             </div>
-            <div className="text-[11px] text-gray-400">ನಮ್ಮ ಊರು</div>
+            {/* Desktop nav */}
+            <div className="hide-mobile" style={{ alignItems: 'center', gap: '2rem' }}>
+              <a href="#how-it-works" onClick={scrollToSection('how-it-works')} className="nav-link" style={{ color: TEXT_MUTED, fontSize: '0.875rem' }}>How It Works</a>
+              <a href="#coverage" className="nav-link" style={{ color: TEXT_MUTED, fontSize: '0.875rem' }}>Coverage</a>
+              <a href="#about" className="nav-link" style={{ color: TEXT_MUTED, fontSize: '0.875rem' }}>About</a>
+              <Link href="/report" className="btn-glow" style={{ background: TEAL, color: 'white', padding: '0.5rem 1.25rem', borderRadius: '9999px', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 500 }}>
+                Report an Issue →
+              </Link>
+            </div>
+            {/* Mobile hamburger */}
+            <button className="show-mobile" onClick={() => setMobileOpen(true)} style={{ background: 'none', border: 'none', color: TEXT_PRIMARY, cursor: 'pointer', padding: '0.5rem', display: 'block' }} aria-label="Open menu">
+              <Menu size={24} />
+            </button>
           </div>
-          <Link
-            href="/report"
-            className="rounded-full bg-[#0F6E56] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#0d5f4a] sm:px-5"
-          >
-            File a Report →
-          </Link>
         </nav>
 
-        {/* Hero content */}
-        <div className="mx-auto max-w-4xl px-5 pb-24 pt-12 text-center sm:px-8 sm:pt-20">
-          <span className="inline-flex items-center rounded-full border border-[#0F6E56]/40 bg-[#0F6E56]/10 px-3 py-1 text-xs font-medium text-[#4ade97]">
-            Bengaluru's First AI Civic Platform
-          </span>
+        {/* Mobile overlay */}
+        {mobileOpen && (
+          <div style={{ position: 'fixed', inset: 0, background: DARK, zIndex: 200, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem' }}>
+            <button onClick={() => setMobileOpen(false)} style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', background: 'none', border: 'none', color: TEXT_PRIMARY, cursor: 'pointer' }}><X size={24} /></button>
+            {[['How It Works', '#how-it-works'], ['Coverage', '#coverage'], ['About', '#about']].map(([label, href]) => (
+              <a key={label} href={href} onClick={() => setMobileOpen(false)} style={{ color: TEXT_PRIMARY, textDecoration: 'none', fontSize: '1.25rem' }}>{label}</a>
+            ))}
+            <Link href="/report" onClick={() => setMobileOpen(false)} style={{ background: TEAL, color: 'white', padding: '0.75rem 2.5rem', borderRadius: '9999px', textDecoration: 'none', fontSize: '1rem', fontWeight: 600 }}>Report an Issue →</Link>
+          </div>
+        )}
 
-          <h1 className="mt-6 text-4xl font-bold leading-tight tracking-tight text-white sm:text-5xl md:text-6xl">
-            Report civic issues.
-            <br />
-            <span className="text-[#0F6E56]">Claude fixes the paperwork.</span>
-          </h1>
+        {/* ── SECTION 1 — HERO ───────────────────────────────────── */}
+        <section style={{ minHeight: '100vh', background: DARK, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden', paddingTop: '64px' }} className="noise">
+          {/* Mesh blobs */}
+          <div className="drift1" style={{ position: 'absolute', width: '600px', height: '600px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(15,110,86,0.1) 0%, transparent 70%)', top: '5%', left: '-15%', pointerEvents: 'none' }} />
+          <div className="drift2" style={{ position: 'absolute', width: '500px', height: '500px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(15,110,86,0.08) 0%, transparent 70%)', bottom: '5%', right: '-10%', pointerEvents: 'none' }} />
 
-          <p className="mx-auto mt-6 max-w-2xl text-base text-gray-300 sm:text-lg">
-            Capture a photo. AI verifies, classifies, and drafts a formal legal
-            letter to your BBMP ward officer — in 30 seconds.
-          </p>
+          <div style={{ maxWidth: '800px', margin: '0 auto', padding: '4rem 1.5rem 5rem', textAlign: 'center', position: 'relative', zIndex: 1 }}>
+            {/* Badge */}
+            <div className="h1" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', border: `1px solid rgba(15,110,86,0.4)`, borderRadius: '9999px', padding: '0.375rem 1rem', fontSize: '0.75rem', color: TEAL_LIGHT, background: 'rgba(15,110,86,0.08)', marginBottom: '1.75rem' }}>
+              <span className="pulse" style={{ width: '6px', height: '6px', borderRadius: '50%', background: TEAL, display: 'inline-block', flexShrink: 0 }} />
+              Bengaluru's First AI Civic Reporting Platform
+            </div>
 
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
-            <Link
-              href="/report"
-              className="inline-flex w-full items-center justify-center rounded-full bg-[#0F6E56] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#0d5f4a] sm:w-auto"
-            >
-              Report an Issue →
-            </Link>
-            <a
-              href="#how-it-works"
-              onClick={scrollToHowItWorks}
-              className="inline-flex w-full items-center justify-center rounded-full border border-white/30 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10 sm:w-auto"
-            >
-              See How It Works
-            </a>
+            {/* Heading */}
+            <h1 className="h2 font-display" style={{ fontSize: 'clamp(2.5rem, 5.5vw, 4rem)', fontWeight: 900, lineHeight: 1.08, color: TEXT_PRIMARY, marginBottom: '1.5rem' }}>
+              Report civic issues.<br />
+              <em style={{ color: TEAL, fontStyle: 'italic' }}>Claude</em> handles<br />
+              the paperwork.
+            </h1>
+
+            {/* Sub */}
+            <p className="h3" style={{ fontSize: '1.0625rem', color: TEXT_MUTED, maxWidth: '580px', margin: '0 auto 2rem', lineHeight: 1.75 }}>
+              Capture a photo. AI verifies the issue, assigns urgency, and drafts a formal legal letter to your BBMP ward officer — complete with statutory references. In 30 seconds.
+            </p>
+
+            {/* CTAs */}
+            <div className="h4" style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'center', marginBottom: '2rem' }}>
+              <Link href="/report" className="btn-glow" style={{ background: TEAL, color: 'white', padding: '0.875rem 2rem', borderRadius: '9999px', textDecoration: 'none', fontSize: '1rem', fontWeight: 600 }}>
+                Report an Issue →
+              </Link>
+              <a href="#how-it-works" onClick={scrollToSection('how-it-works')} style={{ background: 'transparent', color: 'white', padding: '0.875rem 2rem', borderRadius: '9999px', textDecoration: 'none', fontSize: '1rem', fontWeight: 500, border: '1px solid rgba(255,255,255,0.28)', transition: 'background 0.2s' }}>
+                See How It Works ↓
+              </a>
+            </div>
+
+            {/* Trust signals */}
+            <div className="h5" style={{ display: 'flex', flexWrap: 'wrap', gap: '1.25rem', justifyContent: 'center', fontSize: '0.8125rem', color: TEXT_MUTED }}>
+              <span>✓ Claude Vision verified</span>
+              <span style={{ opacity: 0.3 }}>·</span>
+              <span>✓ BBMP Act citations</span>
+              <span style={{ opacity: 0.3 }}>·</span>
+              <span>✓ Free to use</span>
+            </div>
           </div>
 
-          <div className="mt-10 flex flex-col items-center justify-center gap-3 text-xs text-gray-400 sm:flex-row sm:gap-6 sm:text-sm">
-            <span className="inline-flex items-center gap-1.5">
-              <CheckCircle className="h-4 w-4 text-[#0F6E56]" />
-              28 BVT tests passing
-            </span>
-            <span className="hidden sm:inline">·</span>
-            <span className="inline-flex items-center gap-1.5">
-              <Building2 className="h-4 w-4 text-[#0F6E56]" />
-              5 BBMP pilot wards
-            </span>
-            <span className="hidden sm:inline">·</span>
-            <span className="inline-flex items-center gap-1.5">
-              <CheckCircle className="h-4 w-4 text-[#0F6E56]" />
-              ₹0 to file a report
-            </span>
+          {/* Scroll indicator */}
+          <div className="bounce" style={{ position: 'absolute', bottom: '2rem', left: '50%', transform: 'translateX(-50%)', color: TEXT_MUTED }}>
+            <ChevronDown size={22} />
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ─── SECTION 2 — HOW IT WORKS ─────────────────────────────── */}
-      <section id="how-it-works" className="bg-gray-50 px-5 py-20 sm:px-8">
-        <div className="mx-auto max-w-6xl">
-          <h2 className="text-center text-3xl font-bold tracking-tight sm:text-4xl">
-            Three steps. Thirty seconds.
-          </h2>
+        {/* ── SECTION 2 — HOW IT WORKS ───────────────────────────── */}
+        <section id="how-it-works" style={{ background: DARK2, padding: '120px 1.5rem' }}>
+          <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+            <div className="reveal" style={{ textAlign: 'center', marginBottom: '4rem' }}>
+              <div style={{ color: GOLD, fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '1rem' }}>THE PROCESS</div>
+              <h2 className="font-display" style={{ fontSize: 'clamp(1.875rem, 4vw, 2.5rem)', fontWeight: 700, color: TEXT_PRIMARY }}>Three steps. Thirty seconds.</h2>
+            </div>
 
-          <div className="mt-14 grid grid-cols-1 items-start gap-6 md:grid-cols-[1fr_auto_1fr_auto_1fr]">
-            <StepCard
-              icon={<Camera className="h-6 w-6" />}
-              emoji="📸"
-              title="Capture"
-              body="Point your camera at the issue. GPS auto-detects your ward."
-            />
-            <ArrowRight className="mx-auto hidden h-6 w-6 text-[#0F6E56] md:block" />
-            <StepCard
-              icon={<Bot className="h-6 w-6" />}
-              emoji="🤖"
-              title="AI Verifies"
-              body="Claude Vision validates the image, classifies the issue, and assigns triage level."
-            />
-            <ArrowRight className="mx-auto hidden h-6 w-6 text-[#0F6E56] md:block" />
-            <StepCard
-              icon={<Mail className="h-6 w-6" />}
-              emoji="✉️"
-              title="Draft & Send"
-              body="A formal legal letter is drafted to your BBMP ward officer with statutory references."
-            />
+            <div className="steps-grid">
+              {/* Step 1 */}
+              <div className="reveal card-lift" style={{ background: DARK3, borderLeft: `4px solid ${TEAL}`, borderRadius: '0.75rem', padding: '2rem', position: 'relative', boxShadow: '0 4px 24px rgba(0,0,0,0.2)' }}>
+                <div className="font-mono-jet" style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', fontSize: '2rem', fontWeight: 500, color: GOLD, opacity: 0.5 }}>01</div>
+                <Camera size={32} style={{ color: TEAL, marginBottom: '1rem' }} />
+                <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: TEXT_PRIMARY, marginBottom: '0.625rem' }}>Capture the Issue</h3>
+                <p style={{ color: TEXT_MUTED, fontSize: '0.9rem', lineHeight: 1.72, marginBottom: '1.5rem' }}>Point your camera at the pothole, garbage pile, or broken infrastructure. GPS auto-detects your ward and zone.</p>
+                <div className="font-mono-jet" style={{ fontSize: '0.68rem', color: TEXT_MUTED, opacity: 0.65 }}>capture="environment"</div>
+              </div>
+
+              {/* Arrow */}
+              <div className="step-arrow arrow-pulse">→</div>
+
+              {/* Step 2 */}
+              <div className="reveal card-lift" style={{ background: DARK3, borderLeft: `4px solid ${TEAL}`, borderRadius: '0.75rem', padding: '2rem', position: 'relative', boxShadow: '0 4px 24px rgba(0,0,0,0.2)' }}>
+                <div className="font-mono-jet" style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', fontSize: '2rem', fontWeight: 500, color: GOLD, opacity: 0.5 }}>02</div>
+                <Shield size={32} style={{ color: TEAL, marginBottom: '1rem' }} />
+                <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: TEXT_PRIMARY, marginBottom: '0.625rem' }}>Claude Validates</h3>
+                <p style={{ color: TEXT_MUTED, fontSize: '0.9rem', lineHeight: 1.72, marginBottom: '1.5rem' }}>Claude Vision checks authenticity, classifies the issue type, detects private property, and assigns a triage level — all in one API call.</p>
+                <div className="font-mono-jet" style={{ fontSize: '0.68rem', color: TEXT_MUTED, opacity: 0.65 }}>claude-haiku-4-5</div>
+              </div>
+
+              {/* Arrow */}
+              <div className="step-arrow arrow-pulse">→</div>
+
+              {/* Step 3 */}
+              <div className="reveal card-lift" style={{ background: DARK3, borderLeft: `4px solid ${TEAL}`, borderRadius: '0.75rem', padding: '2rem', position: 'relative', boxShadow: '0 4px 24px rgba(0,0,0,0.2)' }}>
+                <div className="font-mono-jet" style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', fontSize: '2rem', fontWeight: 500, color: GOLD, opacity: 0.5 }}>03</div>
+                <FileText size={32} style={{ color: TEAL, marginBottom: '1rem' }} />
+                <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: TEXT_PRIMARY, marginBottom: '0.625rem' }}>Legal Letter Generated</h3>
+                <p style={{ color: TEXT_MUTED, fontSize: '0.9rem', lineHeight: 1.72, marginBottom: '1.5rem' }}>A formal grievance email citing BBMP Act 1976 is drafted to your ward officer. Copy, paste, send. BBMP has a legal obligation to respond.</p>
+                <div className="font-mono-jet" style={{ fontSize: '0.68rem', color: TEXT_MUTED, opacity: 0.65 }}>BBMP Act 1976 §58</div>
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ─── SECTION 3 — AI VALIDATION GATE ───────────────────────── */}
-      <section className="bg-white px-5 py-20 sm:px-8">
-        <div className="mx-auto max-w-5xl">
-          <h2 className="text-center text-3xl font-bold tracking-tight sm:text-4xl">
-            Every report is verified before it reaches BBMP.
-          </h2>
-          <p className="mt-3 text-center text-base text-gray-600">
-            Claude Vision rejects invalid submissions automatically.
-          </p>
-
-          <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2">
-            {/* Rejected */}
-            <div className="rounded-xl border border-gray-200 border-l-4 border-l-red-500 bg-white p-6 shadow-sm">
-              <div className="flex items-center gap-2 text-lg font-semibold text-red-600">
-                <XCircle className="h-5 w-5" />
-                Rejected
-              </div>
-              <div className="mt-4 flex h-40 items-center justify-center rounded-lg bg-gray-100 text-sm text-gray-500">
-                Screenshot detected
-              </div>
-              <div className="mt-4">
-                <span className="inline-flex rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
-                  screenshot
-                </span>
-              </div>
-              <p className="mt-3 text-sm text-gray-700">
-                Please submit a direct photo of the issue, not a photo of a screen.
+        {/* ── SECTION 3 — AI VALIDATION GATE ────────────────────── */}
+        <section style={{ background: CREAM, padding: '120px 1.5rem' }}>
+          <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+            <div className="reveal" style={{ textAlign: 'center', marginBottom: '4rem' }}>
+              <div style={{ color: TEAL, fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '1rem' }}>AI VERIFICATION</div>
+              <h2 className="font-display" style={{ fontSize: 'clamp(1.75rem, 4vw, 2.5rem)', fontWeight: 700, color: '#1a2e28' }}>Every report is verified before it reaches BBMP.</h2>
+              <p style={{ marginTop: '1rem', color: '#4a6660', maxWidth: '520px', margin: '1rem auto 0', lineHeight: 1.72 }}>
+                Invalid, fake, or private property submissions are rejected automatically. Officers only receive verified reports.
               </p>
             </div>
 
-            {/* Accepted */}
-            <div className="rounded-xl border border-gray-200 border-l-4 border-l-[#0F6E56] bg-white p-6 shadow-sm">
-              <div className="flex items-center gap-2 text-lg font-semibold text-[#0F6E56]">
-                <CheckCircle2 className="h-5 w-5" />
-                Verified
-              </div>
-              <div className="mt-4 flex h-40 items-center justify-center rounded-lg bg-gray-100 text-sm text-gray-500">
-                Real outdoor photo
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Pill tone="teal">Pothole</Pill>
-                <Pill tone="amber">High Severity</Pill>
-                <Pill tone="red">URGENT L1</Pill>
-              </div>
-              <div className="mt-4 space-y-1.5 text-sm text-gray-700">
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-gray-500" />
-                  HSR Layout, Bengaluru
+            <div className="two-col">
+              {/* Rejected */}
+              <div className="reveal card-lift" style={{ background: 'white', borderLeft: '4px solid #e53e3e', borderTop: '2px solid #e53e3e', borderRadius: '0.75rem', padding: '1.5rem', boxShadow: '0 4px 20px rgba(0,0,0,0.07)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: RED, fontWeight: 700, fontSize: '1rem', marginBottom: '1.25rem' }}>❌ Rejected</div>
+                <div style={{ aspectRatio: '16/9', background: '#f3f4f6', borderRadius: '0.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                  <Monitor size={24} style={{ color: '#9ca3af' }} />
+                  <span style={{ color: '#9ca3af', fontSize: '0.8125rem' }}>Screenshot detected</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-gray-500" />
-                  HSR Layout Ward · Bommanahalli Zone
+                <span style={{ background: '#fee2e2', color: '#b91c1c', borderRadius: '9999px', padding: '0.2rem 0.75rem', fontSize: '0.725rem', fontWeight: 600 }}>screenshot</span>
+                <div style={{ marginTop: '0.875rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.5rem', padding: '0.75rem', color: '#b91c1c', fontSize: '0.8125rem', lineHeight: 1.65 }}>
+                  Please submit a direct photo of the issue, not a photo of a screen.
                 </div>
-                <div className="text-xs text-gray-500">94% confidence</div>
+                <p style={{ marginTop: '0.75rem', fontSize: '0.72rem', color: '#9ca3af' }}>No API credits used for invalid submissions</p>
+              </div>
+
+              {/* Accepted */}
+              <div className="reveal card-lift" style={{ background: 'white', borderLeft: `4px solid ${TEAL}`, borderTop: `2px solid ${TEAL}`, borderRadius: '0.75rem', padding: '1.5rem', boxShadow: '0 4px 20px rgba(0,0,0,0.07)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: TEAL, fontWeight: 700, fontSize: '1rem', marginBottom: '1.25rem' }}>✅ Verified</div>
+                <div style={{ aspectRatio: '16/9', background: 'linear-gradient(135deg, #e5e7eb, #d1d5db)', borderRadius: '0.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                  <Camera size={24} style={{ color: TEAL }} />
+                  <span style={{ color: '#6b7280', fontSize: '0.8125rem' }}>Real outdoor photo</span>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
+                  <span style={{ background: '#1a2e28', color: 'white', borderRadius: '9999px', padding: '0.2rem 0.75rem', fontSize: '0.72rem', fontWeight: 600 }}>Pothole</span>
+                  <span style={{ background: '#fef3c7', color: '#92400e', borderRadius: '9999px', padding: '0.2rem 0.75rem', fontSize: '0.72rem', fontWeight: 600 }}>High Severity</span>
+                  <span style={{ background: '#fee2e2', color: '#b91c1c', borderRadius: '9999px', padding: '0.2rem 0.75rem', fontSize: '0.72rem', fontWeight: 700 }}>URGENT L1</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', marginBottom: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8125rem', color: '#374151' }}>
+                    <MapPin size={14} style={{ color: TEAL, flexShrink: 0 }} /> HSR Layout, Bengaluru
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8125rem', color: '#374151' }}>
+                    <Building2 size={14} style={{ color: TEAL, flexShrink: 0 }} /> HSR Layout Ward · Bommanahalli Zone
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.725rem', color: '#6b7280', marginBottom: '0.375rem' }}>
+                  <span>AI Confidence</span><span>94%</span>
+                </div>
+                <ConfidenceBar />
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ─── SECTION 4 — EMAIL DRAFT PREVIEW ──────────────────────── */}
-      <section className="bg-[#0F6E56] px-5 py-20 text-white sm:px-8">
-        <div className="mx-auto max-w-3xl">
-          <h2 className="text-center text-3xl font-bold tracking-tight sm:text-4xl">
-            Claude drafts the legal letter. You just hit send.
-          </h2>
+        {/* ── SECTION 4 — EMAIL DRAFT PREVIEW ────────────────────── */}
+        <section ref={emailRef} style={{ background: DARK, paddingBottom: '120px', position: 'relative' }}>
+          <div style={{ height: '8px', background: `linear-gradient(90deg, ${DARK2}, ${TEAL}, ${DARK2})` }} />
+          <div style={{ maxWidth: '900px', margin: '0 auto', padding: '80px 1.5rem 0' }}>
+            <div className="reveal" style={{ textAlign: 'center', marginBottom: '3rem' }}>
+              <div style={{ color: GOLD, fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '1rem' }}>THE OUTPUT</div>
+              <h2 className="font-display" style={{ fontSize: 'clamp(1.75rem, 4vw, 2.5rem)', fontWeight: 700, color: TEXT_PRIMARY, lineHeight: 1.15 }}>
+                Claude drafts the legal letter.<br />You just hit send.
+              </h2>
+              <p style={{ marginTop: '1rem', color: TEXT_MUTED, maxWidth: '460px', margin: '1rem auto 0', lineHeight: 1.72 }}>
+                Formal. Factual. Statutory references included. No emotional language. Just legal obligation.
+              </p>
+            </div>
 
-          <div className="relative mt-12 overflow-hidden rounded-xl bg-white text-gray-900 shadow-2xl">
-            <div className="space-y-2 border-b border-gray-200 px-6 py-4 text-sm">
-              <div>
-                <span className="font-semibold text-gray-500">TO:</span>{' '}
-                Ward Officer, HSR Layout Ward &lt;hsrlayout.ward@bbmp.gov.in&gt;
+            {/* Email card */}
+            <div className="reveal" style={{ background: 'white', borderRadius: '0.875rem', boxShadow: '0 30px 70px rgba(0,0,0,0.45)', maxWidth: '680px', margin: '0 auto 2.5rem', overflow: 'hidden' }}>
+              {/* Window bar */}
+              <div style={{ background: '#f3f4f6', padding: '0.625rem 1rem', display: 'flex', alignItems: 'center', borderBottom: '1px solid #e5e7eb' }}>
+                <div style={{ display: 'flex', gap: '0.375rem' }}>
+                  <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ef4444' }} />
+                  <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#f59e0b' }} />
+                  <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#10b981' }} />
+                </div>
+                <span style={{ flex: 1, textAlign: 'center', fontSize: '0.78rem', color: '#9ca3af' }}>New Message</span>
               </div>
-              <div>
-                <span className="font-semibold text-gray-500">CC:</span>{' '}
-                grievance@bbmp.gov.in
+
+              {/* Headers */}
+              {[
+                { label: 'TO:', content: <span>Ward Officer, HSR Layout <span className="font-mono-jet" style={{ color: TEAL, fontSize: '0.72rem' }}>&lt;hsrlayout.ward@bbmp.gov.in&gt;</span></span> },
+                { label: 'CC:', content: <span className="font-mono-jet" style={{ color: TEAL, fontSize: '0.72rem' }}>grievance@bbmp.gov.in</span> },
+              ].map(({ label, content }) => (
+                <div key={label} style={{ padding: '0.625rem 1.25rem', borderBottom: '1px solid #f3f4f6', fontSize: '0.8125rem', display: 'flex', gap: '0.625rem', color: '#374151' }}>
+                  <span style={{ color: '#9ca3af', fontWeight: 600, minWidth: '52px' }}>{label}</span>
+                  {content}
+                </div>
+              ))}
+              <div style={{ padding: '0.625rem 1.25rem', borderBottom: '1px solid #f3f4f6', fontSize: '0.8125rem' }}>
+                <div style={{ display: 'flex', gap: '0.625rem', color: '#374151' }}>
+                  <span style={{ color: '#9ca3af', fontWeight: 600, minWidth: '52px' }}>SUBJECT:</span>
+                  <span style={{ fontWeight: 500, color: '#111827' }}>[Report NMR-20260421-A7F3] URGENT: Pothole at HSR Layout — Action Required</span>
+                </div>
+                <div style={{ marginTop: '0.375rem', paddingLeft: 'calc(52px + 0.625rem)', fontSize: '0.72rem', color: '#9ca3af' }}>
+                  ವರದಿ NMR-20260421-A7F3: HSR Layoutದಲ್ಲಿ Pothole — ತಕ್ಷಣ ಕ್ರಮ ಅಗತ್ಯ
+                </div>
               </div>
-              <div>
-                <span className="font-semibold text-gray-500">SUBJECT:</span>{' '}
-                [Report NMR-20260421-A7F3] URGENT: Pothole at HSR Layout — Action Required
+              <div style={{ padding: '0.625rem 1.25rem', borderBottom: '1px solid #f3f4f6' }}>
+                <span className="font-mono-jet" style={{ background: 'rgba(15,110,86,0.1)', color: TEAL, borderRadius: '9999px', padding: '0.2rem 0.75rem', fontSize: '0.68rem' }}>NMR-20260421-A7F3</span>
               </div>
-              <div className="text-xs text-gray-500">
-                ವರದಿ NMR-20260421-A7F3: HSR Layoutದಲ್ಲಿ Pothole — ತಕ್ಷಣ ಕ್ರಮ ಅಗತ್ಯ
+
+              {/* Body — typewriter */}
+              <div style={{ padding: '1.25rem', minHeight: '200px', position: 'relative' }}>
+                <div style={{ fontSize: '0.85rem', lineHeight: 1.82, color: '#374151', whiteSpace: 'pre-wrap', fontFamily: "'DM Sans', sans-serif" }}>
+                  {typedText}
+                  {!typingDone && (
+                    <span className="blink" style={{ display: 'inline-block', width: '2px', height: '1em', background: TEAL, verticalAlign: 'text-bottom', marginLeft: '1px' }} />
+                  )}
+                </div>
+                {typedText.length > 10 && !typingDone && (
+                  <div style={{ position: 'absolute', bottom: 40, left: 0, right: 0, height: '60px', background: 'linear-gradient(to top, white, transparent)', pointerEvents: 'none' }} />
+                )}
+                {typedText.length > 0 && (
+                  <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.72rem', color: typingDone ? TEAL : TEXT_MUTED }}>
+                    {!typingDone
+                      ? <><span className="pulse" style={{ width: '6px', height: '6px', borderRadius: '50%', background: TEAL, display: 'inline-block' }} />Claude is drafting...</>
+                      : <>✓ Draft complete</>}
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="px-6 py-5">
-              <span className="inline-flex rounded-full bg-[#0F6E56]/10 px-3 py-1 text-xs font-semibold text-[#0F6E56]">
-                NMR-20260421-A7F3
-              </span>
+            {/* Pills */}
+            <div className="reveal" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.75rem' }}>
+              {['⚖️ Cites BBMP Act 1976', '📍 GPS coordinates', '🔁 RTI escalation path'].map((p) => (
+                <span key={p} style={{ border: `1px solid rgba(15,110,86,0.35)`, background: 'rgba(15,110,86,0.06)', color: TEXT_PRIMARY, borderRadius: '9999px', padding: '0.5rem 1.25rem', fontSize: '0.85rem' }}>{p}</span>
+              ))}
+            </div>
+          </div>
+        </section>
 
-              <div className="relative mt-4 text-sm leading-relaxed text-gray-800">
-                <p>Dear Ward Officer,</p>
-                <p className="mt-3">
-                  I write to formally report a High Severity pothole at HSR
-                  Layout, Bengaluru (GPS: 12.9116, 77.6370). This matter is
-                  filed under Report ID NMR-20260421-A7F3 via the NammuruAI
-                  civic platform...
-                </p>
-                <p className="mt-3 text-gray-600">
-                  [BBMP Act 1976 Section 58 reference...]
-                </p>
-                <div className="mt-4 text-xs italic text-gray-500">...continues</div>
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white to-transparent" />
+        {/* ── SECTION 5 — TRIAGE SYSTEM ──────────────────────────── */}
+        <section style={{ background: DARK2, padding: '120px 1.5rem' }}>
+          <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+            <div className="reveal" style={{ textAlign: 'center', marginBottom: '4rem' }}>
+              <div style={{ color: GOLD, fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '1rem' }}>URGENCY CLASSIFICATION</div>
+              <h2 className="font-display" style={{ fontSize: 'clamp(1.75rem, 4vw, 2.5rem)', fontWeight: 700, color: TEXT_PRIMARY }}>AI assigns urgency. Officers know what to fix first.</h2>
+            </div>
+
+            <div className="three-col">
+              {/* L1 */}
+              <div className="reveal card-lift" style={{ background: DARK3, borderLeft: `4px solid ${RED}`, borderRadius: '0.75rem', padding: '2rem', boxShadow: '0 4px 24px rgba(0,0,0,0.2)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                  <AlertTriangle size={28} style={{ color: RED }} />
+                  <span style={{ background: RED, color: 'white', borderRadius: '9999px', padding: '0.2rem 0.75rem', fontSize: '0.68rem', fontWeight: 700 }}>Level 1</span>
+                </div>
+                <div className="font-display" style={{ fontSize: '3rem', fontWeight: 700, color: RED, lineHeight: 1 }}>48h</div>
+                <div style={{ color: TEXT_MUTED, fontSize: '0.875rem', marginBottom: '1rem' }}>Response Required</div>
+                <div style={{ height: '1px', background: 'rgba(229,62,62,0.2)', marginBottom: '1rem' }} />
+                <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '1.5rem' }}>
+                  {['Potholes — high severity', 'Road encroachments', '10+ cluster reports', 'Safety hazards'].map((i) => (
+                    <li key={i} style={{ fontSize: '0.8rem', color: TEXT_MUTED, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: RED, flexShrink: 0 }} />{i}
+                    </li>
+                  ))}
+                </ul>
+                <div className="font-mono-jet" style={{ fontSize: '0.68rem', color: RED, opacity: 0.8 }}>BBMP Act 1976 §58</div>
+              </div>
+
+              {/* L2 */}
+              <div className="reveal card-lift" style={{ background: DARK3, borderLeft: `4px solid ${AMBER}`, borderRadius: '0.75rem', padding: '2rem', boxShadow: '0 4px 24px rgba(0,0,0,0.2)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                  <Clock size={28} style={{ color: AMBER }} />
+                  <span style={{ background: AMBER, color: 'white', borderRadius: '9999px', padding: '0.2rem 0.75rem', fontSize: '0.68rem', fontWeight: 700 }}>Level 2</span>
+                </div>
+                <div className="font-display" style={{ fontSize: '3rem', fontWeight: 700, color: AMBER, lineHeight: 1 }}>7 days</div>
+                <div style={{ color: TEXT_MUTED, fontSize: '0.875rem', marginBottom: '1rem' }}>Response Required</div>
+                <div style={{ height: '1px', background: 'rgba(217,119,6,0.2)', marginBottom: '1rem' }} />
+                <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '1.5rem' }}>
+                  {['Garbage accumulation', 'Broken streetlights', '3–9 cluster reports', 'Medium severity issues'].map((i) => (
+                    <li key={i} style={{ fontSize: '0.8rem', color: TEXT_MUTED, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: AMBER, flexShrink: 0 }} />{i}
+                    </li>
+                  ))}
+                </ul>
+                <div className="font-mono-jet" style={{ fontSize: '0.68rem', color: AMBER, opacity: 0.8 }}>Solid Waste Rules 2016</div>
+              </div>
+
+              {/* L3 */}
+              <div className="reveal card-lift" style={{ background: DARK3, borderLeft: `4px solid ${TEAL}`, borderRadius: '0.75rem', padding: '2rem', boxShadow: '0 4px 24px rgba(0,0,0,0.2)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                  <CheckCircle size={28} style={{ color: TEAL }} />
+                  <span style={{ background: TEAL, color: 'white', borderRadius: '9999px', padding: '0.2rem 0.75rem', fontSize: '0.68rem', fontWeight: 700 }}>Level 3</span>
+                </div>
+                <div className="font-display" style={{ fontSize: '3rem', fontWeight: 700, color: TEAL, lineHeight: 1 }}>30 days</div>
+                <div style={{ color: TEXT_MUTED, fontSize: '0.875rem', marginBottom: '1rem' }}>Maintenance Schedule</div>
+                <div style={{ height: '1px', background: 'rgba(15,110,86,0.2)', marginBottom: '1rem' }} />
+                <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '1.5rem' }}>
+                  {['Minor repairs', 'Low severity issues', 'Isolated incidents', 'Routine maintenance'].map((i) => (
+                    <li key={i} style={{ fontSize: '0.8rem', color: TEXT_MUTED, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: TEAL, flexShrink: 0 }} />{i}
+                    </li>
+                  ))}
+                </ul>
+                <div className="font-mono-jet" style={{ fontSize: '0.68rem', color: TEAL, opacity: 0.8 }}>Standard BBMP SLA</div>
               </div>
             </div>
           </div>
+        </section>
 
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <OutlinePill icon={<Scale className="h-4 w-4" />}>
-              Cites BBMP Act 1976
-            </OutlinePill>
-            <OutlinePill icon={<Navigation className="h-4 w-4" />}>
-              GPS coordinates included
-            </OutlinePill>
-            <OutlinePill icon={<RotateCcw className="h-4 w-4" />}>
-              RTI escalation path
-            </OutlinePill>
-          </div>
-        </div>
-      </section>
+        {/* ── SECTION 6 — WARD COVERAGE ──────────────────────────── */}
+        <section id="coverage" style={{ background: CREAM, padding: '120px 1.5rem' }}>
+          <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+            <div className="reveal" style={{ textAlign: 'center', marginBottom: '4rem' }}>
+              <div style={{ color: TEAL, fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '1rem' }}>PILOT COVERAGE</div>
+              <h2 className="font-display" style={{ fontSize: 'clamp(1.75rem, 4vw, 2.5rem)', fontWeight: 700, color: '#1a2e28' }}>5 BBMP wards. 198 coming.</h2>
+              <p style={{ marginTop: '1rem', color: '#4a6660', maxWidth: '520px', margin: '1rem auto 0', lineHeight: 1.72 }}>
+                NammuruAI launched with 5 pilot wards covering central and south Bengaluru. Full ward coverage post-launch.
+              </p>
+            </div>
 
-      {/* ─── SECTION 5 — TRIAGE ───────────────────────────────────── */}
-      <section className="bg-gray-50 px-5 py-20 sm:px-8">
-        <div className="mx-auto max-w-6xl">
-          <h2 className="text-center text-3xl font-bold tracking-tight sm:text-4xl">
-            AI assigns urgency. Officers know what to fix first.
-          </h2>
+            <div className="ward-grid" style={{ marginBottom: '2rem' }}>
+              {[
+                { name: 'HSR Layout', zone: 'Bommanahalli Zone' },
+                { name: 'Koramangala', zone: 'South Zone' },
+                { name: 'Indiranagar', zone: 'East Zone' },
+                { name: 'Whitefield', zone: 'East Zone' },
+                { name: 'Jayanagar', zone: 'South Zone' },
+              ].map((w) => (
+                <div key={w.name} className="reveal card-lift" style={{ background: 'white', borderLeft: `3px solid ${TEAL}`, borderRadius: '0.5rem', padding: '1rem 1.25rem', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', minWidth: '180px' }}>
+                  <div style={{ fontWeight: 500, color: '#111827', marginBottom: '0.375rem' }}>{w.name}</div>
+                  <span style={{ background: TEAL, color: 'white', borderRadius: '9999px', padding: '0.15rem 0.625rem', fontSize: '0.64rem', fontWeight: 500 }}>{w.zone}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginTop: '0.625rem', fontSize: '0.75rem', color: '#6b7280' }}>
+                    <MapPin size={12} style={{ color: TEAL }} />
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+                    Active
+                  </div>
+                </div>
+              ))}
+            </div>
 
-          <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-3">
-            <TriageCard
-              tone="red"
-              badge="Level 1 · URGENT"
-              sla="48-hour response required"
-              issues="Potholes (high severity), Encroachments, 10+ cluster reports"
-              icon={<AlertTriangle className="h-6 w-6 text-red-600" />}
-            />
-            <TriageCard
-              tone="amber"
-              badge="Level 2 · MEDIUM"
-              sla="7-day response required"
-              issues="Garbage, Streetlights (medium severity), 3–9 cluster reports"
-              icon={<Clock className="h-6 w-6 text-amber-600" />}
-            />
-            <TriageCard
-              tone="teal"
-              badge="Level 3 · ROUTINE"
-              sla="Maintenance schedule"
-              issues="Minor repairs, low severity, isolated incidents"
-              icon={<CheckCircle className="h-6 w-6 text-[#0F6E56]" />}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* ─── SECTION 6 — WARD COVERAGE ────────────────────────────── */}
-      <section className="bg-white px-5 py-20 sm:px-8">
-        <div className="mx-auto max-w-4xl text-center">
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Pilot coverage: 5 BBMP wards
-          </h2>
-          <p className="mt-3 text-base text-gray-600">
-            Expanding to all 198 wards post-launch.
-          </p>
-
-          <div className="mt-10 flex flex-wrap justify-center gap-3">
-            {[
-              { name: 'HSR Layout', zone: 'Bommanahalli' },
-              { name: 'Koramangala', zone: 'South' },
-              { name: 'Indiranagar', zone: 'East' },
-              { name: 'Whitefield', zone: 'East' },
-              { name: 'Jayanagar', zone: 'South' },
-            ].map((w) => (
-              <div
-                key={w.name}
-                className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm"
-              >
-                <span className="font-semibold text-gray-900">{w.name}</span>
-                <span className="text-gray-500"> · {w.zone}</span>
+            <div className="reveal info-bar" style={{ background: TEAL, borderRadius: '0.75rem', padding: '1.25rem 1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'white', fontSize: '0.9rem' }}>
+                <Building2 size={18} style={{ flexShrink: 0 }} />
+                Outside these wards? Reports are routed to BBMP Central Grievance Cell.
               </div>
-            ))}
+              <span style={{ color: GOLD, fontStyle: 'italic', fontSize: '0.9rem', fontWeight: 500, whiteSpace: 'nowrap' }}>More cities coming →</span>
+            </div>
           </div>
+        </section>
 
-          <p className="mt-8 text-sm text-gray-500">
-            Outside these wards? Reports are routed to BBMP Grievance Cell.
-          </p>
-        </div>
-      </section>
-
-      {/* ─── SECTION 7 — STATS ────────────────────────────────────── */}
-      <section className="bg-[#0a1a14] px-5 py-16 text-white sm:px-8">
-        <div className="mx-auto grid max-w-5xl grid-cols-2 gap-8 text-center md:grid-cols-4">
-          <Stat value="5" label="Pilot Wards" />
-          <Stat value="3" label="Triage Levels" />
-          <Stat value="48h" label="L1 Response SLA" />
-          <Stat value="1" label="Claude API call per report" />
-        </div>
-      </section>
-
-      {/* ─── SECTION 8 — CTA FOOTER ───────────────────────────────── */}
-      <section className="bg-[#0F6E56] px-5 py-20 text-center text-white sm:px-8">
-        <div className="mx-auto max-w-3xl">
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            See a civic issue? Report it now.
-          </h2>
-          <p className="mt-3 text-base text-white/80">
-            Takes 30 seconds. Claude handles the rest.
-          </p>
-          <Link
-            href="/report"
-            className="mt-8 inline-flex items-center justify-center rounded-full bg-white px-8 py-4 text-base font-semibold text-[#0F6E56] shadow-lg transition hover:bg-gray-50"
-          >
-            File a Report →
-          </Link>
-          <p className="mt-6 text-xs text-white/70">
-            Free · No account required · Bengaluru only
-          </p>
-        </div>
-      </section>
-
-      {/* ─── FOOTER ───────────────────────────────────────────────── */}
-      <footer className="bg-[#0a1a14] px-5 py-12 text-gray-300 sm:px-8">
-        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 md:grid-cols-3">
-          <div>
-            <div className="text-lg font-bold text-[#0F6E56]">NammuruAI</div>
-            <div className="text-xs text-gray-400">ನಮ್ಮ ಊರು</div>
-            <p className="mt-3 text-sm">Built for Bengaluru citizens.</p>
+        {/* ── SECTION 7 — STATS BAR ──────────────────────────────── */}
+        <section ref={statsRef} style={{ background: DARK, padding: '80px 1.5rem' }}>
+          <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+            <div className="four-col">
+              <CountUpStat target={5} label="Pilot Wards" active={statsInView} />
+              <CountUpStat target={3} label="Triage Levels" active={statsInView} />
+              <StatStatic value="48h" label="L1 Response SLA" />
+              <CountUpStat target={1} label="Claude API Call Per Report" active={statsInView} />
+            </div>
           </div>
-          <div className="flex flex-col gap-2 text-sm md:items-center">
-            <Link href="/report" className="hover:text-white">
-              Report an Issue
+        </section>
+
+        {/* ── SECTION 8 — CITIES CTA ─────────────────────────────── */}
+        <section id="about" style={{ background: `linear-gradient(180deg, ${DARK2}, ${DARK})`, padding: '120px 1.5rem' }}>
+          <div style={{ maxWidth: '900px', margin: '0 auto', textAlign: 'center' }}>
+            <div className="reveal">
+              <h2 className="font-display" style={{ fontSize: 'clamp(1.5rem, 3vw, 2rem)', fontWeight: 700, color: TEXT_PRIMARY, marginBottom: '1rem' }}>
+                Built for Bengaluru. Designed for every Indian city.
+              </h2>
+              <p style={{ color: TEXT_MUTED, maxWidth: '560px', margin: '0 auto 3rem', lineHeight: 1.8 }}>
+                NammuruAI is open to city contributions. The ward resolver, triage engine, and email draft system are all city-configurable. Add your city's ward data and statutory references — the AI pipeline works everywhere.
+              </p>
+            </div>
+            <div className="two-col" style={{ textAlign: 'left' }}>
+              <div className="reveal card-lift" style={{ background: DARK3, border: `1px solid rgba(15,110,86,0.3)`, borderRadius: '0.75rem', padding: '2rem' }}>
+                <Globe size={32} style={{ color: TEAL, marginBottom: '1rem' }} />
+                <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: TEXT_PRIMARY, marginBottom: '0.625rem' }}>Add Your City</h3>
+                <p style={{ color: TEXT_MUTED, fontSize: '0.9rem', lineHeight: 1.72, marginBottom: '1.5rem' }}>Mumbai · Delhi · Chennai · Hyderabad · Pune and beyond. Each city needs ward data + officer emails + statutory references.</p>
+                <a href="#" className="city-link city-link-teal">View Contribution Guide →</a>
+              </div>
+              <div className="reveal card-lift" style={{ background: DARK3, border: `1px solid rgba(212,168,67,0.3)`, borderRadius: '0.75rem', padding: '2rem' }}>
+                <MapPin size={32} style={{ color: GOLD, marginBottom: '1rem' }} />
+                <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: TEXT_PRIMARY, marginBottom: '0.625rem' }}>Request Coverage</h3>
+                <p style={{ color: TEXT_MUTED, fontSize: '0.9rem', lineHeight: 1.72, marginBottom: '1.5rem' }}>Not in Bengaluru? Submit a city request. We prioritize cities with the most requests.</p>
+                <a href="#" className="city-link city-link-gold">Request Your City →</a>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── SECTION 9 — FINAL CTA ──────────────────────────────── */}
+        <section style={{ background: TEAL, padding: '120px 1.5rem', textAlign: 'center', position: 'relative', overflow: 'hidden' }} className="noise">
+          <div style={{ position: 'relative', zIndex: 1, maxWidth: '700px', margin: '0 auto' }}>
+            <h2 className="font-display reveal" style={{ fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: 900, color: 'white', lineHeight: 1.1, marginBottom: '1.25rem' }}>
+              See a civic issue?<br />Report it now.
+            </h2>
+            <p className="reveal" style={{ color: 'rgba(255,255,255,0.82)', fontSize: '1.0625rem', marginBottom: '2.5rem', lineHeight: 1.72 }}>
+              Takes 30 seconds. Claude handles the rest.<br />Free. No account required. Bengaluru only.
+            </p>
+            <Link href="/report" className="btn-white reveal" style={{ display: 'inline-block', background: 'white', color: TEAL, padding: '1rem 2.5rem', borderRadius: '9999px', fontSize: '1.0625rem', fontWeight: 700, textDecoration: 'none' }}>
+              Report an Issue →
             </Link>
-            <a href="#how-it-works" onClick={scrollToHowItWorks} className="hover:text-white">
-              How It Works
-            </a>
-            <Link href="/about" className="hover:text-white">
-              About
-            </Link>
-          </div>
-          <div className="text-sm md:text-right">
-            <div className="font-semibold text-white">Built with Claude AI</div>
-            <div className="mt-1 text-xs text-gray-400">
-              Powered by Anthropic's Claude
+            <div className="reveal" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '1.5rem', marginTop: '2rem', fontSize: '0.8125rem', color: 'rgba(255,255,255,0.72)' }}>
+              <span>🔒 No data sold</span>
+              <span>⚡ Powered by Claude AI</span>
+              <span>🏛️ Formal legal letters</span>
             </div>
-            <div className="mt-1 text-xs text-gray-400">Day 3 of 14</div>
           </div>
-        </div>
-        <div className="mx-auto mt-10 max-w-6xl border-t border-white/10 pt-6 text-center text-xs text-gray-500">
-          © 2026 NammuruAI · Not affiliated with BBMP · Civic tech for public good
-        </div>
-      </footer>
-    </main>
-  )
-}
+        </section>
 
-// ─── Subcomponents ──────────────────────────────────────────────
-
-function StepCard({
-  icon,
-  emoji,
-  title,
-  body,
-}: {
-  icon: React.ReactNode
-  emoji: string
-  title: string
-  body: string
-}) {
-  return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-      <div className="flex items-center gap-3">
-        <span className="text-2xl" aria-hidden>
-          {emoji}
-        </span>
-        <span className="text-[#0F6E56]">{icon}</span>
-      </div>
-      <h3 className="mt-4 text-lg font-semibold">{title}</h3>
-      <p className="mt-2 text-sm text-gray-600">{body}</p>
-    </div>
-  )
-}
-
-function Pill({
-  tone,
-  children,
-}: {
-  tone: 'teal' | 'amber' | 'red'
-  children: React.ReactNode
-}) {
-  const cls =
-    tone === 'teal'
-      ? 'bg-[#0F6E56]/10 text-[#0F6E56]'
-      : tone === 'amber'
-      ? 'bg-amber-100 text-amber-800'
-      : 'bg-red-100 text-red-700'
-  return (
-    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${cls}`}>
-      {children}
-    </span>
-  )
-}
-
-function OutlinePill({
-  icon,
-  children,
-}: {
-  icon: React.ReactNode
-  children: React.ReactNode
-}) {
-  return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-white/40 px-4 py-1.5 text-sm text-white">
-      {icon}
-      {children}
-    </span>
-  )
-}
-
-function TriageCard({
-  tone,
-  badge,
-  sla,
-  issues,
-  icon,
-}: {
-  tone: 'red' | 'amber' | 'teal'
-  badge: string
-  sla: string
-  issues: string
-  icon: React.ReactNode
-}) {
-  const borderCls =
-    tone === 'red'
-      ? 'border-l-red-500'
-      : tone === 'amber'
-      ? 'border-l-amber-500'
-      : 'border-l-[#0F6E56]'
-  const badgeCls =
-    tone === 'red'
-      ? 'bg-red-100 text-red-700'
-      : tone === 'amber'
-      ? 'bg-amber-100 text-amber-800'
-      : 'bg-[#0F6E56]/10 text-[#0F6E56]'
-  return (
-    <div className={`rounded-xl border border-gray-200 border-l-4 ${borderCls} bg-white p-6 shadow-sm`}>
-      <div className="flex items-center justify-between">
-        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${badgeCls}`}>
-          {badge}
-        </span>
-        {icon}
-      </div>
-      <div className="mt-4 text-sm font-semibold text-gray-900">{sla}</div>
-      <p className="mt-2 text-sm text-gray-600">{issues}</p>
-    </div>
-  )
-}
-
-function Stat({ value, label }: { value: string; label: string }) {
-  return (
-    <div>
-      <div className="text-4xl font-bold text-[#0F6E56] sm:text-5xl">{value}</div>
-      <div className="mt-2 text-xs text-white/80 sm:text-sm">{label}</div>
-    </div>
+        {/* ── FOOTER ─────────────────────────────────────────────── */}
+        <footer style={{ background: DARK, borderTop: `1px solid rgba(15,110,86,0.18)`, padding: '4rem 1.5rem 2rem' }}>
+          <div className="footer-grid" style={{ maxWidth: '1200px', margin: '0 auto', marginBottom: '3rem' }}>
+            <div>
+              <div className="font-display" style={{ color: TEAL, fontSize: '1.1rem', fontWeight: 700 }}>NammuruAI</div>
+              <div style={{ color: TEXT_MUTED, fontSize: '0.72rem', marginBottom: '0.5rem' }}>ನಮ್ಮ ಊರು</div>
+              <p style={{ color: TEXT_MUTED, fontSize: '0.8125rem', marginTop: '0.5rem' }}>Built for Bengaluru citizens.</p>
+              <p style={{ color: GOLD, fontSize: '0.75rem', fontStyle: 'italic', marginTop: '0.25rem' }}>Day 3 of 14 — building in public</p>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <Link href="/report" className="footer-link">Report an Issue</Link>
+              <a href="#how-it-works" onClick={scrollToSection('how-it-works')} className="footer-link">How It Works</a>
+              <a href="#coverage" className="footer-link">Ward Coverage</a>
+              <Link href="/about" className="footer-link">About NammuruAI</Link>
+            </div>
+            <div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                <span style={{ color: TEXT_MUTED, fontSize: '0.875rem' }}>Built with</span>
+                <span style={{ background: 'rgba(15,110,86,0.15)', color: TEAL, borderRadius: '9999px', padding: '0.2rem 0.75rem', fontSize: '0.72rem', fontWeight: 500 }}>Claude AI by Anthropic</span>
+              </div>
+              <div className="font-mono-jet" style={{ color: TEXT_MUTED, fontSize: '0.68rem' }}>Next.js · Supabase · Tailwind CSS</div>
+            </div>
+          </div>
+          <div style={{ borderTop: `1px solid rgba(15,110,86,0.1)`, paddingTop: '1.5rem', textAlign: 'center', fontSize: '0.72rem', color: TEXT_MUTED, maxWidth: '1200px', margin: '0 auto' }}>
+            © 2026 NammuruAI · Not affiliated with BBMP · Civic technology for public good
+          </div>
+        </footer>
+      </main>
+    </>
   )
 }

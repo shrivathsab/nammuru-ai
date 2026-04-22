@@ -4,15 +4,32 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
   CheckCircle2,
-  Loader2,
   Copy,
   Mail,
   FileDown,
   ArrowRight,
   AlertTriangle,
+  FileText,
+  Check,
+  ExternalLink,
 } from 'lucide-react'
 
 import type { DraftEmailResponse } from '@/app/api/draft-email/route'
+import { AppShell } from '@/components/AppShell'
+import { ReportIdBadge } from '@/components/ui/ReportIdBadge'
+import { TealSpinner } from '@/components/ui/TealSpinner'
+import { tokens } from '@/lib/design-tokens'
+
+// ─── Local aliases (kept to minimise diff within inline styles) ──────────────
+
+const TEAL = tokens.colors.teal
+const DARK2 = tokens.colors.dark2
+const DARK3 = tokens.colors.dark3
+const GOLD = tokens.colors.gold
+const RED = tokens.colors.red
+const AMBER = tokens.colors.amber
+const TEXT_PRIMARY = tokens.colors.textPrimary
+const TEXT_MUTED = tokens.colors.textMuted
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -90,38 +107,6 @@ function stripMarkdown(text: string): string {
     .replace(/`{1,3}(.*?)`{1,3}/g, '$1')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .trim()
-}
-
-// ─── Step indicator ───────────────────────────────────────────────────────────
-
-function StepPills() {
-  const steps = [
-    { n: 1, label: 'Capture', done: true },
-    { n: 2, label: 'AI Verify', done: true },
-    { n: 3, label: 'Draft Email', active: true },
-    { n: 4, label: 'Share', done: false },
-  ]
-  return (
-    <div className="flex items-center gap-2 overflow-x-auto pb-1">
-      {steps.map((s) => (
-        <div
-          key={s.n}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${
-            s.active
-              ? 'bg-[#0F6E56] text-white'
-              : s.done
-              ? 'bg-[#E6F3F0] text-[#0F6E56]'
-              : 'bg-gray-100 text-gray-400'
-          }`}
-        >
-          <span>{s.n}.</span>
-          <span>{s.label}</span>
-          {s.done && <CheckCircle2 size={12} />}
-          {s.active && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
-        </div>
-      ))}
-    </div>
-  )
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -218,202 +203,261 @@ export default function EmailDraftPage() {
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Link href="/">
-            <span className="text-xl font-bold" style={{ color: '#0F6E56' }}>NammuruAI</span>
-            <p className="text-xs text-gray-400 leading-tight mt-0.5">
-              ನಮ್ಮ ಊರಿಗಾಗಿ AI — Civic accountability for Bengaluru
-            </p>
-          </Link>
-        </div>
-      </nav>
+    <AppShell currentStep={3}>
+      <style>{`
+        textarea {
+          background: ${DARK3};
+          color: ${TEXT_PRIMARY};
+          border: 1px solid rgba(15,110,86,0.3);
+          font-family: 'DM Sans', sans-serif;
+          border-radius: 0.75rem;
+          padding: 1rem;
+          font-size: 0.9rem;
+          line-height: 1.75;
+          outline: none;
+          resize: vertical;
+          width: 100%;
+          min-height: 420px;
+          transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        textarea:focus {
+          border-color: ${TEAL};
+          box-shadow: 0 0 0 3px rgba(15,110,86,0.12);
+        }
+        textarea::placeholder { color: ${TEXT_MUTED}; }
 
-      <main className="flex-1">
-        <div className="max-w-2xl w-full mx-auto px-4 py-6 flex flex-col gap-6 pb-32">
-          <StepPills />
+        .email-field-row {
+          display: flex;
+          gap: 0.75rem;
+          padding: 0.75rem 1rem;
+          border-bottom: 1px solid rgba(15,110,86,0.1);
+          font-size: 0.875rem;
+          align-items: flex-start;
+        }
+        .email-field-label {
+          color: ${TEXT_MUTED};
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 0.68rem;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          width: 4.5rem;
+          flex-shrink: 0;
+          padding-top: 2px;
+        }
+      `}</style>
 
-          {state.kind === 'loading' && (
-            <div className="flex flex-col items-center text-center gap-5 py-16">
-              <div
-                className="w-20 h-20 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: '#E6F3F0' }}
-              >
-                <Loader2 size={36} className="animate-spin" style={{ color: '#0F6E56' }} />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                  Claude is drafting your official letter...
-                </h1>
-                <p className="text-gray-500 max-w-sm">
-                  Composing a formal grievance email with legal references and ward-specific routing.
-                </p>
-              </div>
-            </div>
-          )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingBottom: '4rem' }}>
 
-          {state.kind === 'missing' && (
-            <div className="flex flex-col items-center text-center gap-5 py-16">
-              <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center">
-                <AlertTriangle size={30} className="text-red-500" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 mb-1">No report found</h1>
-                <p className="text-gray-500 text-sm">Please start a new report.</p>
-              </div>
-              <Link
-                href="/report"
-                className="inline-flex items-center justify-center gap-2 rounded-xl font-semibold text-white px-6"
-                style={{ backgroundColor: '#0F6E56', minHeight: '52px' }}
-              >
-                Start a new report
-              </Link>
-            </div>
-          )}
-
-          {state.kind === 'error' && (
-            <div className="flex flex-col items-center text-center gap-5 py-16">
-              <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center">
-                <AlertTriangle size={30} className="text-red-500" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 mb-1">Couldn&apos;t draft letter</h1>
-                <p className="text-gray-500 text-sm">{state.message}</p>
-              </div>
-              <button
-                onClick={() => window.location.reload()}
-                className="inline-flex items-center justify-center gap-2 rounded-xl font-semibold text-white px-6"
-                style={{ backgroundColor: '#0F6E56', minHeight: '52px' }}
-              >
-                Try Again
-              </button>
-            </div>
-          )}
-
-          {state.kind === 'ready' && (
-            <>
-              {/* Section 1 — Header */}
-              <section className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col gap-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span
-                    className="inline-flex items-center gap-1 text-xs font-mono font-semibold px-2.5 py-1 rounded-full"
-                    style={{ backgroundColor: '#E6F3F0', color: '#0F6E56' }}
-                  >
-                    {state.draft.report_id}
-                  </span>
-                  {submitStatus === 'saved' && (
-                    <span className="inline-flex items-center gap-1 text-xs text-green-600">
-                      <CheckCircle2 size={12} /> Report saved
-                    </span>
-                  )}
-                  {submitStatus === 'saving' && (
-                    <span className="inline-flex items-center gap-1 text-xs text-gray-400">
-                      <Loader2 size={12} className="animate-spin" /> Saving…
-                    </span>
-                  )}
-                  {submitStatus === 'failed' && (
-                    <span className="text-xs text-amber-600">Save failed — you can still send</span>
-                  )}
+            {/* ── Loading ───────────────────────────────────────────────── */}
+            {state.kind === 'loading' && (
+              <div className="card-enter" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '1.5rem', paddingTop: '3rem' }}>
+                <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(15,110,86,0.08)', border: `1px solid rgba(15,110,86,0.2)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <TealSpinner size="md" />
                 </div>
-                <div className="border-t border-gray-100 pt-2 flex flex-col gap-1.5">
-                  <div className="flex gap-2">
-                    <span className="text-gray-400 font-medium w-16 flex-shrink-0">TO:</span>
-                    <span className="text-gray-900 break-all">
-                      {state.draft.recipient_name} &lt;{state.draft.recipient_email}&gt;
-                    </span>
+                <div>
+                  <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: '1.5rem', fontWeight: 700, color: TEXT_PRIMARY, marginBottom: '0.875rem' }}>
+                    Claude is drafting your official letter...
+                  </h1>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    {['Resolving ward officer...', 'Generating statutory references...', 'Drafting formal letter...'].map((text, i) => (
+                      <p key={text} style={{ fontSize: '0.875rem', color: TEXT_MUTED, animation: `fadeInUp 0.4s ease-out ${i * 200}ms both` }}>{text}</p>
+                    ))}
                   </div>
-                  <div className="flex gap-2">
-                    <span className="text-gray-400 font-medium w-16 flex-shrink-0">CC:</span>
-                    <span className="text-gray-700 break-all">{state.draft.cc_emails.join(', ')}</span>
+                </div>
+              </div>
+            )}
+
+            {/* ── Missing ───────────────────────────────────────────────── */}
+            {state.kind === 'missing' && (
+              <div className="card-enter" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '1.5rem', paddingTop: '3rem' }}>
+                <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(229,62,62,0.08)', border: `1px solid rgba(229,62,62,0.25)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <AlertTriangle size={28} style={{ color: RED }} />
+                </div>
+                <div>
+                  <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: '1.5rem', fontWeight: 700, color: TEXT_PRIMARY, marginBottom: '0.375rem' }}>No report found</h1>
+                  <p style={{ color: TEXT_MUTED, fontSize: '0.875rem' }}>Please start a new report.</p>
+                </div>
+                <Link
+                  href="/report"
+                  className="btn-teal-glow"
+                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', borderRadius: '9999px', fontWeight: 600, color: 'white', background: TEAL, minHeight: '52px', padding: '0 2rem', textDecoration: 'none', fontFamily: "'DM Sans', sans-serif", fontSize: '1rem' }}
+                >
+                  Start a new report
+                </Link>
+              </div>
+            )}
+
+            {/* ── Error ─────────────────────────────────────────────────── */}
+            {state.kind === 'error' && (
+              <div className="card-enter" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '1.5rem', paddingTop: '3rem' }}>
+                <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(229,62,62,0.08)', border: `1px solid rgba(229,62,62,0.25)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <AlertTriangle size={28} style={{ color: RED }} />
+                </div>
+                <div>
+                  <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: '1.5rem', fontWeight: 700, color: TEXT_PRIMARY, marginBottom: '0.375rem' }}>Couldn&apos;t draft letter</h1>
+                  <p style={{ color: TEXT_MUTED, fontSize: '0.875rem' }}>{state.message}</p>
+                </div>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="btn-teal-glow"
+                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', borderRadius: '9999px', fontWeight: 600, color: 'white', background: TEAL, minHeight: '52px', padding: '0 2rem', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: '1rem' }}
+                >
+                  Try Again
+                </button>
+              </div>
+            )}
+
+            {/* ── Ready ─────────────────────────────────────────────────── */}
+            {state.kind === 'ready' && (
+              <div className="card-enter" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+
+                {/* SECTION A — Email Header Card */}
+                <section style={{ background: DARK2, borderRadius: '0.875rem', border: `1px solid rgba(15,110,86,0.18)`, overflow: 'hidden' }}>
+                  {/* macOS window bar */}
+                  <div style={{ background: DARK3, padding: '0.625rem 1rem', display: 'flex', alignItems: 'center', borderBottom: `1px solid rgba(15,110,86,0.1)` }}>
+                    <div style={{ display: 'flex', gap: '0.375rem' }}>
+                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444' }} />
+                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#f59e0b' }} />
+                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#10b981' }} />
+                    </div>
+                    <span style={{ flex: 1, textAlign: 'center', fontSize: '0.75rem', color: TEXT_MUTED }}>Official Grievance Letter</span>
+                    <ReportIdBadge id={state.draft.report_id} />
                   </div>
-                  <div className="flex gap-2">
-                    <span className="text-gray-400 font-medium w-16 flex-shrink-0">SUBJECT:</span>
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-gray-900 font-medium">{state.draft.subject}</span>
-                      <span className="text-gray-400 text-xs">{state.draft.subject_kannada}</span>
+
+                  {/* Email fields */}
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <div className="email-field-row">
+                      <span className="email-field-label">TO</span>
+                      <span style={{ color: TEXT_PRIMARY }}>
+                        {state.draft.recipient_name}{' '}
+                        <span style={{ color: TEAL, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.8rem' }}>
+                          &lt;{state.draft.recipient_email}&gt;
+                        </span>
+                      </span>
+                    </div>
+                    <div className="email-field-row">
+                      <span className="email-field-label">CC</span>
+                      <span style={{ color: TEAL, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.8rem' }}>
+                        {state.draft.cc_emails.join(', ')}
+                      </span>
+                    </div>
+                    <div className="email-field-row">
+                      <span className="email-field-label">SUBJECT</span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <span style={{ color: TEXT_PRIMARY, fontWeight: 500 }}>{state.draft.subject}</span>
+                        <span style={{ color: TEXT_MUTED, fontSize: '0.8rem' }}>{state.draft.subject_kannada}</span>
+                      </div>
+                    </div>
+
+                    {/* Status / report ID row */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.625rem 1rem', background: 'rgba(15,110,86,0.04)' }}>
+                      <span style={{ fontSize: '0.68rem', color: TEXT_MUTED, fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase', letterSpacing: '0.06em' }}>REPORT ID</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        {submitStatus === 'saved' && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', color: TEAL }}>
+                            <CheckCircle2 size={12} /> Saved
+                          </span>
+                        )}
+                        {submitStatus === 'saving' && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', color: TEXT_MUTED }}>
+                            <div className="spinner-teal-sm" /> Saving…
+                          </span>
+                        )}
+                        {submitStatus === 'failed' && (
+                          <span style={{ fontSize: '0.75rem', color: AMBER }}>Save failed — you can still send</span>
+                        )}
+                        <ReportIdBadge id={state.draft.report_id} />
+                      </div>
                     </div>
                   </div>
-                </div>
-              </section>
+                </section>
 
-              {/* Section 2 — Editable body */}
-              <section className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-gray-700">Letter body</label>
-                <textarea
-                  value={editedBody}
-                  onChange={(e) => setEditedBody(e.target.value)}
-                  className="w-full bg-white border border-gray-200 rounded-xl p-4 text-sm text-gray-800 font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#0F6E56] focus:border-transparent"
-                  style={{ minHeight: '400px' }}
-                />
-                <div className="flex items-center justify-between text-xs text-gray-400">
-                  <span>You can edit this letter before sending.</span>
-                  <span>{editedBody.length} characters</span>
-                </div>
-                <p className="text-xs text-gray-400 mt-1">
-                  Pastes with formatting into Gmail. Plain text in all other apps.
-                </p>
-              </section>
+                {/* SECTION B — Editable body */}
+                <section style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <FileText size={16} style={{ color: TEAL }} />
+                    <span style={{ fontSize: '0.875rem', fontWeight: 500, color: TEXT_PRIMARY }}>Letter Draft</span>
+                    <span style={{ fontSize: '0.8rem', color: TEXT_MUTED, marginLeft: 'auto' }}>You can edit before sending</span>
+                  </div>
+                  <textarea
+                    value={editedBody}
+                    onChange={(e) => setEditedBody(e.target.value)}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <span style={{ fontSize: '0.72rem', color: TEXT_MUTED, fontFamily: "'JetBrains Mono', monospace" }}>{editedBody.length} characters</span>
+                  </div>
+                </section>
 
-              {/* Next step */}
-              <Link
-                href="/report/tweet"
-                className="self-end inline-flex items-center gap-1 text-sm font-medium"
-                style={{ color: '#0F6E56' }}
-              >
-                Generate Tweet Thread <ArrowRight size={14} />
-              </Link>
-            </>
-          )}
-        </div>
-      </main>
+                {/* Next step — Tweet Thread */}
+                <Link
+                  href="/report/tweet"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: '9999px', border: `1px solid rgba(212,168,67,0.45)`, background: 'rgba(212,168,67,0.05)', padding: '0.875rem 1.25rem', textDecoration: 'none', color: GOLD, fontFamily: "'DM Sans', sans-serif", fontWeight: 500, fontSize: '0.9375rem', transition: 'background 0.2s ease' }}
+                >
+                  <span>Generate Tweet Thread</span>
+                  <ArrowRight size={16} style={{ color: GOLD }} />
+                </Link>
+              </div>
+            )}
 
-      {/* Section 3 — Sticky action bar */}
-      {state.kind === 'ready' && (
-        <div className="sticky bottom-0 bg-white border-t border-gray-200">
-          <div className="max-w-2xl mx-auto px-4 py-3 flex flex-col gap-2">
-            <button
-              onClick={() => void handleCopy()}
-              className="w-full flex items-center justify-center gap-2 rounded-xl font-semibold text-white text-base"
-              style={{ backgroundColor: copied ? '#0B5A45' : '#0F6E56', minHeight: '52px' }}
-            >
-              {copied ? (
-                <>
-                  <CheckCircle2 size={18} /> Copied! Open your email app and paste.
-                </>
-              ) : (
-                <>
-                  <Copy size={18} /> Copy Email to Clipboard
-                </>
-              )}
-            </button>
-            <div className="grid grid-cols-2 gap-2">
-              <a
-                href={buildGmailUrl(state.draft, editedBody)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 rounded-xl font-semibold text-gray-700 text-sm border border-gray-300 bg-white"
-                style={{ minHeight: '44px' }}
-              >
-                <Mail size={16} /> Open in Gmail
-              </a>
+        {/* ── Sticky action bar ────────────────────────────────────────────── */}
+        {state.kind === 'ready' && (
+          <div style={{ position: 'sticky', bottom: 0, marginLeft: '-1rem', marginRight: '-1rem', marginTop: '1.5rem', background: 'rgba(8,15,12,0.96)', backdropFilter: 'blur(12px)', borderTop: `1px solid rgba(15,110,86,0.2)` }}>
+            <div style={{ maxWidth: '640px', margin: '0 auto', padding: '0.875rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+
+              {/* Primary — Copy */}
               <button
-                onClick={() => alert('PDF export coming soon.')}
-                className="flex items-center justify-center gap-2 rounded-xl font-semibold text-gray-400 text-sm border border-gray-200 bg-gray-50"
-                style={{ minHeight: '44px' }}
+                onClick={() => void handleCopy()}
+                className="btn-teal-glow"
+                style={{
+                  width: '100%',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                  borderRadius: '9999px', fontWeight: 600, fontSize: '1rem',
+                  color: 'white',
+                  background: copied ? '#0a5240' : TEAL,
+                  minHeight: '52px', border: 'none', cursor: 'pointer',
+                  fontFamily: "'DM Sans', sans-serif",
+                  transition: 'background 0.2s ease',
+                }}
               >
-                <FileDown size={16} /> Download as PDF
+                {copied ? (
+                  <><Check size={18} /> ✓ Copied! Open your email app and paste.</>
+                ) : (
+                  <><Copy size={18} /> Copy Email to Clipboard</>
+                )}
               </button>
+
+              {/* Secondary row */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                <a
+                  href={buildGmailUrl(state.draft, editedBody)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem', borderRadius: '9999px', fontWeight: 500, color: TEAL, background: DARK3, minHeight: '44px', border: `1px solid ${TEAL}`, textDecoration: 'none', fontSize: '0.875rem', fontFamily: "'DM Sans', sans-serif", transition: 'background 0.2s ease' }}
+                >
+                  <Mail size={14} /> Open in Gmail <ExternalLink size={12} />
+                </a>
+                <button
+                  onClick={() => alert('PDF export coming soon.')}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem', borderRadius: '9999px', fontWeight: 500, color: GOLD, background: DARK3, minHeight: '44px', border: `1px solid rgba(212,168,67,0.4)`, fontSize: '0.875rem', cursor: 'not-allowed', opacity: 0.7, fontFamily: "'DM Sans', sans-serif" }}
+                  title="Coming soon — Day 10"
+                >
+                  <FileDown size={14} /> Download as PDF
+                </button>
+              </div>
+
+              {/* Mailto fallback */}
+              <a
+                href={buildMailto(state.draft, editedBody)}
+                style={{ textAlign: 'center', fontSize: '0.75rem', color: TEXT_MUTED, textDecoration: 'none' }}
+              >
+                Having trouble?{' '}
+                <span style={{ color: TEAL, textDecoration: 'underline' }}>Open directly in your email app →</span>
+              </a>
             </div>
-            <a
-              href={buildMailto(state.draft, editedBody)}
-              className="text-center text-xs text-gray-400 hover:text-gray-600"
-            >
-              Having trouble? Click here to open in your email app →
-            </a>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+
+      </div>
+    </AppShell>
   )
 }

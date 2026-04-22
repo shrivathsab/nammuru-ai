@@ -19,6 +19,25 @@
 - Accent colour: #0F6E56 (teal — namma ooru green)
 - All Anthropic API calls go through app/api/ never client-side
 - Rate limit all AI routes: 5 req/min per IP
+- Never run `npx tsc --noEmit` automatically after file changes — it is too slow
+- For type verification use `./node_modules/.bin/tsc --noEmit --skipLibCheck 2>&1 | head -20`
+- Only run a full typecheck when the user explicitly says "run typecheck"
+- Never run full project typechecks after every edit — reason about type correctness from context instead
+
+## TypeScript Verification
+
+NEVER run `npx tsc --noEmit` to verify type correctness.
+It is too slow in this environment.
+
+Instead, verify types by:
+1. Reading the file and reasoning about type correctness directly
+2. If a type check is truly needed, run:
+   `./node_modules/.bin/tsc --noEmit --skipLibCheck 2>&1 | head -20`
+3. For single file checks, reason about the types from context —
+   do not run a full project typecheck after every change.
+
+Only run a full typecheck when explicitly asked by the user with
+the phrase "run typecheck".
 
 ## Supabase schema (reports table):
 - id uuid PK, created_at timestamptz, lat float8, lng float8

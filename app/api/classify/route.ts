@@ -442,6 +442,7 @@ Validate and classify this image reported from ${locationDetails.locality}, Beng
       claudeResult.issue_type!,
       claudeResult.severity!,
       clusterCount,
+      claudeResult.confidence ?? 0.75,
     );
 
     const cluster: ClusterInfo = {
