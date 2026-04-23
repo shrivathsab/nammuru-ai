@@ -229,6 +229,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const allHashtags = `#Bengaluru #GBA #BBMP ${issueHashtag}`
 
+    const fixedCost = 23 + 23 + 3 + 3 + allHandles.length +
+                      allHashtags.length + 10
+    const descriptionBudget = 280 - fixedCost
+
     // STEP 5: Combined Claude call
     let emailBody: string
     let tweetPrimary: string
@@ -298,38 +302,43 @@ EMAIL must include:
    Report ID: ${reportId}
    Public record: nammuru.ai/report/${reportId}"
 
-TWEET must be one punchy tweet under 240 chars (Twitter wraps all
-URLs to 23 chars regardless of length).
+TWEET STRICT CHARACTER BUDGET — Twitter limit is 280 chars total.
+Twitter auto-shortens ALL URLs to exactly 23 chars (t.co wrapping).
 
-Must include:
-- Issue type and locality (specific, not generic)
-- Report ID: ${reportId}
-- Public report URL: nammuru.ai/report/${reportId}
-- Google Maps URL: ${googleMapsUrl}
-- Official handles (verified active 2026): ${allHandles}
-- Hashtags: ${allHashtags}
+Fixed costs you cannot change:
+  Maps URL:      23 chars  (always present)
+  Report URL:    23 chars  (always present)
+  " 📍 ":         3 chars
+  " 📋 ":         3 chars
+  Handles:       count actual chars of: ${allHandles}
+  Hashtags:      count actual chars of: ${allHashtags}
+  Spaces:        ~10 chars
 
-Character budget (Twitter counts):
-- URLs count as 23 chars each (you have 2 URLs = 46 chars)
-- Handles count as their actual length
-- Stay under 240 chars for the non-URL text so full tweet is safe
+Calculate fixed cost:
+  fixed = 23 + 23 + 3 + 3 + ${allHandles.length} +
+          ${allHashtags.length} + 10
 
-TWEET format:
-🚨 [issue] at [locality], Bengaluru.
-AI-verified · [triage_label] · [deadline] to respond.
-📍 [googleMapsUrl]
-Report: nammuru.ai/report/[reportId]
-[allHandles]
-[allHashtags]
+Your description budget = 280 - fixed chars
+Your description must be ${descriptionBudget} characters or fewer.
+Count carefully before finalising.
+Write the description to fit EXACTLY within that budget.
+Be ruthless — cut adjectives, cut details, keep only:
+  verb + issue type + location + deadline
 
-NOTE: Add "SR No: XXXX" if the user has a Sahaaya 2.0 grievance
-number — leave a placeholder if not available:
-"(Add Sahaaya SR No. if filed via 1533)"
-Keep total under 240 chars excluding URLs and handles.
+GOOD (concise):
+  "🚨 Waste dumping blocking footpath at Hoodi. 7-day deadline."
 
-Do NOT include handles the user hasn't authorised. The user can
-add or remove handles before posting. Present the handles as
-suggestions they can keep or delete.
+BAD (too verbose):
+  "🚨 Illegal waste dumping blocking footpath at Hoodi, Whitefield.
+   Construction debris, concrete slabs, metal wiring scattered.
+   Public hazard. 7-day response deadline."
+
+Tweet format (strict order):
+[emoji] [verb] [issue] at [locality]. [deadline].
+📍 ${googleMapsUrl}
+📋 nammuru.ai/report/${reportId}
+${allHandles}
+${allHashtags}
 
 REPLY TWEET 2 (escalation):
 Mention that if no response within the deadline, RTI under
