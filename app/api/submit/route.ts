@@ -20,6 +20,9 @@ interface SubmitRequest {
   email_draft: string
   email_subject: string
   email_recipient: string
+  tweet_primary?: string | null
+  tweet_reply_evidence?: string | null
+  tweet_reply_escalation?: string | null
 }
 
 interface SubmitResponse {
@@ -49,6 +52,9 @@ interface ReportInsert {
   pincode: string | null
   nearest_landmark: string | null
   manual_location: boolean
+  tweet_primary: string | null
+  tweet_reply_evidence: string | null
+  tweet_reply_escalation: string | null
 }
 
 // ─── Validation ───────────────────────────────────────────────────────────────
@@ -146,6 +152,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<SubmitRes
       pincode: body.pincode,
       nearest_landmark: body.nearest_landmark,
       manual_location: body.manual_location,
+      tweet_primary: body.tweet_primary ?? null,
+      tweet_reply_evidence: body.tweet_reply_evidence ?? null,
+      tweet_reply_escalation: body.tweet_reply_escalation ?? null,
     }
 
       const { error } = await supabase

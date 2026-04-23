@@ -14,7 +14,7 @@ import {
   ExternalLink,
 } from 'lucide-react'
 
-import type { DraftEmailResponse } from '@/app/api/draft-email/route'
+import type { DraftContentResponse } from '@/lib/types'
 import { AppShell } from '@/components/AppShell'
 import { ReportIdBadge } from '@/components/ui/ReportIdBadge'
 import { TealSpinner } from '@/components/ui/TealSpinner'
@@ -56,11 +56,11 @@ type LoadState =
   | { kind: 'loading' }
   | { kind: 'missing' }
   | { kind: 'error'; message: string }
-  | { kind: 'ready'; draft: DraftEmailResponse; report: ReportDraft }
+  | { kind: 'ready'; draft: DraftContentResponse; report: ReportDraft }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function buildMailto(draft: DraftEmailResponse, body: string): string {
+function buildMailto(draft: DraftContentResponse, body: string): string {
   const params = new URLSearchParams({
     subject: draft.subject,
     body,
@@ -69,7 +69,7 @@ function buildMailto(draft: DraftEmailResponse, body: string): string {
   return `mailto:${encodeURIComponent(draft.recipient_email)}?${params.toString()}`
 }
 
-function buildGmailUrl(draft: DraftEmailResponse, body: string): string {
+function buildGmailUrl(draft: DraftContentResponse, body: string): string {
   const params = new URLSearchParams({
     view: 'cm',
     fs: '1',
@@ -138,7 +138,7 @@ export default function EmailDraftPage() {
     let cancelled = false
     ;(async () => {
       try {
-        const res = await fetch('/api/draft-email', {
+        const res = await fetch('/api/draft-content', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(report),
@@ -150,8 +150,20 @@ export default function EmailDraftPage() {
           if (!cancelled) setState({ kind: 'error', message: msg })
           return
         }
-        const draft = (await res.json()) as DraftEmailResponse
+        const draft = (await res.json()) as DraftContentResponse
         if (cancelled) return
+        const existing = JSON.parse(
+          sessionStorage.getItem('nammuru_report_draft') ?? '{}'
+        )
+        sessionStorage.setItem('nammuru_report_draft', JSON.stringify({
+          ...existing,
+          tweet_primary: draft.tweet.primary,
+          tweet_reply_evidence: draft.tweet.reply_evidence,
+          tweet_reply_escalation: draft.tweet.reply_escalation,
+          report_id_human: draft.report_id,
+          recipient_email: draft.recipient_email,
+          subject: draft.subject,
+        }))
         setEditedBody(stripMarkdown(draft.body))
         setState({ kind: 'ready', draft, report })
       } catch {
@@ -180,6 +192,9 @@ export default function EmailDraftPage() {
         recipient_email: state.draft.recipient_email,
         cc_emails: state.draft.cc_emails,
         subject: state.draft.subject,
+        tweet_primary: state.draft.tweet.primary,
+        tweet_reply_evidence: state.draft.tweet.reply_evidence,
+        tweet_reply_escalation: state.draft.tweet.reply_escalation,
       }),
     })
       .then((r) => setSubmitStatus(r.ok ? 'saved' : 'failed'))

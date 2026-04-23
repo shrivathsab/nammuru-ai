@@ -291,10 +291,13 @@ export default function ReportPage() {
       report_hash:              analysisResult.report_hash ?? '',
       manual_location:          manualLocation,
       captured_at:              new Date().toISOString(),
+      captured_image_url:       imageDataUrl && imageDataUrl.length < 500000
+        ? imageDataUrl
+        : null,
     }
 
     sessionStorage.setItem('nammuru_report_draft', JSON.stringify(draft))
-  }, [step, analysisResult, coords, manualLocation])
+  }, [step, analysisResult, coords, manualLocation, imageDataUrl])
 
   // ── Reset ─────────────────────────────────────────────────────────────────
 
