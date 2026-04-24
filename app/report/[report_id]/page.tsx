@@ -7,14 +7,23 @@ import {
   Shield,
   X as XIcon,
 } from 'lucide-react'
+import { createClient } from '@supabase/supabase-js'
 
 import { CopyButton } from '@/components/ui/CopyButton'
 import { LocationBlock } from '@/components/ui/LocationBlock'
 import { ReportIdBadge } from '@/components/ui/ReportIdBadge'
 import { StatusPill } from '@/components/ui/StatusPill'
 import { TriageBadge } from '@/components/ui/TriageBadge'
+import { reportUrl, reportDisplayUrl } from '@/lib/config'
 import { tokens } from '@/lib/design-tokens'
-import { getServerClient } from '@/lib/supabase'
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 const TEAL = tokens.colors.teal
 const DARK = tokens.colors.dark
@@ -44,6 +53,7 @@ interface ReportRow {
   tweet_primary: string | null
   ward_zone?: string | null
   road?: string | null
+  image_url?: string | null
 }
 
 interface PageParams {
@@ -52,14 +62,20 @@ interface PageParams {
 
 async function fetchReport(reportId: string): Promise<ReportRow | null> {
   try {
-    const supabase = getServerClient()
-    const { data, error } = await supabase
+    const { data: report, error } = await supabaseAdmin
       .from('reports')
       .select('*')
       .eq('report_id_human', reportId)
-      .single()
-    if (error || !data) return null
-    return data as unknown as ReportRow
+      .maybeSingle()
+
+    console.log('[PublicReport] id:', reportId)
+    console.log('[PublicReport] data:', JSON.stringify(report))
+    console.log('[PublicReport] error:', JSON.stringify(error))
+    console.log('[PublicReport] url:', process.env.NEXT_PUBLIC_SUPABASE_URL)
+    console.log('[PublicReport] key exists:', !!process.env.SUPABASE_SERVICE_ROLE_KEY)
+
+    if (error || !report) return null
+    return report as unknown as ReportRow
   } catch {
     return null
   }
@@ -278,8 +294,8 @@ export default async function PublicReportPage({ params }: PageParams) {
   const { absolute, relative } = formatFiledDate(report.created_at)
   const triageLevel = (report.triage_level ?? 3) as 1 | 2 | 3
   const clusterCount = report.cluster_count ?? 0
-  const publicUrl = `nammuru.ai/report/${displayReportId}`
-  const fullUrl = `https://${publicUrl}`
+  const publicUrl = reportDisplayUrl(displayReportId)
+  const fullUrl = reportUrl(displayReportId)
   const mapsUrl = `https://maps.google.com/?q=${report.lat},${report.lng}`
 
   const isResolved = report.status === 'resolved'
@@ -338,6 +354,18 @@ export default async function PublicReportPage({ params }: PageParams) {
             Filed {absolute} · {relative}
           </div>
         </section>
+
+        {report.image_url && (
+          <div className="mt-4 rounded-xl overflow-hidden"
+               style={{ border: '1px solid rgba(15,110,86,0.3)' }}>
+            <img
+              src={report.image_url}
+              alt={`Photo of ${report.issue_type} at ${report.locality_name}`}
+              className="w-full object-cover"
+              style={{ maxHeight: '400px' }}
+            />
+          </div>
+        )}
 
         {/* LOCATION CARD */}
         <section style={{

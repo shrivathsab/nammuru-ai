@@ -29,6 +29,16 @@ const AMBER = tokens.colors.amber
 const TEXT_PRIMARY = tokens.colors.textPrimary
 const TEXT_MUTED = tokens.colors.textMuted
 
+// ─── Ward center fallbacks for manual location ──────────────────────────────
+
+const WARD_CENTERS: Record<string, { lat: number; lng: number }> = {
+  'HSR Layout':   { lat: 12.9116, lng: 77.6370 },
+  'Koramangala':  { lat: 12.9279, lng: 77.6271 },
+  'Indiranagar':  { lat: 12.9784, lng: 77.6408 },
+  'Whitefield':   { lat: 12.9698, lng: 77.7500 },
+  'Jayanagar':    { lat: 12.9299, lng: 77.5833 },
+}
+
 // ─── Rejection messages ───────────────────────────────────────────────────────
 
 const REJECTION_MESSAGES: Record<string, string> = {
@@ -273,19 +283,30 @@ export default function ReportPage() {
   useEffect(() => {
     if (step !== 'result' || !analysisResult?.is_valid || !coords) return
 
+    const locality = analysisResult.location_details?.locality ?? analysisResult.locality_name ?? ''
+    const fallback = WARD_CENTERS[locality] ?? WARD_CENTERS[analysisResult.ward_name ?? '']
+    const rawLat = coords.lat
+    const rawLng = coords.lng
+    const finalLat = typeof rawLat === 'number' && !isNaN(rawLat)
+      ? rawLat
+      : (parseFloat(rawLat as unknown as string) || fallback?.lat || null)
+    const finalLng = typeof rawLng === 'number' && !isNaN(rawLng)
+      ? rawLng
+      : (parseFloat(rawLng as unknown as string) || fallback?.lng || null)
+
     const draft = {
       issue_type:               analysisResult.issue_type,
       severity:                 analysisResult.severity,
       triage_level:             analysisResult.triage_level,
       triage_label:             analysisResult.triage_label,
       description:              analysisResult.description,
-      locality:                 analysisResult.location_details?.locality ?? analysisResult.locality_name ?? '',
+      locality,
       ward_name:                analysisResult.ward_name,
       ward_zone:                analysisResult.ward_zone,
       nearest_landmark:         analysisResult.nearest_landmark,
       pincode:                  analysisResult.location_details?.pincode ?? null,
-      lat:                      coords.lat,
-      lng:                      coords.lng,
+      lat:                      finalLat,
+      lng:                      finalLng,
       cluster_count:            analysisResult.cluster?.cluster_count ?? 0,
       cluster_suggested_action: analysisResult.cluster?.suggested_action ?? null,
       report_hash:              analysisResult.report_hash ?? '',

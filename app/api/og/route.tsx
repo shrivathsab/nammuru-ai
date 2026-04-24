@@ -39,7 +39,7 @@ async function fetchReport(reportId: string): Promise<OgReport | null> {
       .from('reports')
       .select('report_id_human, issue_type, status, triage_level, locality_name, ward_name, image_url')
       .eq('report_id_human', reportId)
-      .single()
+      .maybeSingle()
     if (error || !data) return null
     return data as unknown as OgReport
   } catch {

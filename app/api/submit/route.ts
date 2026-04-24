@@ -1,6 +1,14 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
+  },
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface SubmitRequest {
@@ -20,6 +28,7 @@ interface SubmitRequest {
   email_draft: string
   email_subject: string
   email_recipient: string
+  report_id_human?: string | null
   tweet_primary?: string | null
   tweet_reply_evidence?: string | null
   tweet_reply_escalation?: string | null
@@ -86,20 +95,58 @@ function isSubmitRequest(value: unknown): value is SubmitRequest {
 
 export async function POST(request: NextRequest): Promise<NextResponse<SubmitResponse>> {
   try {
-    const body: unknown = await request.json().catch(() => null)
+    const rawBody: unknown = await request.json().catch(() => null)
 
-    if (!isSubmitRequest(body)) {
+    if (!rawBody || typeof rawBody !== 'object') {
       return NextResponse.json(
         { success: false, report_id: '', error: 'Invalid request body' },
         { status: 400 },
       )
     }
 
+    const raw = rawBody as Record<string, unknown>
+    const { lat, lng, issue_type, report_hash, ward_name, status } = raw
+
+    const required: Record<string, unknown> = {
+      lat, lng, issue_type, report_hash, ward_name
+    }
+    const missing = Object.entries(required)
+      .filter(([, v]) => v == null || v === '')
+      .map(([k]) => k)
+
+    if (missing.length > 0) {
+      console.error('[Submit] Missing fields:', missing)
+      return NextResponse.json(
+        { success: false, report_id: '',
+          error: `Missing required fields: ${missing.join(', ')}` },
+        { status: 400 }
+      )
+    }
+
+    const safeStatus = (status as string | undefined) ?? 'open'
+
+    const latNum = Number(lat)
+    const lngNum = Number(lng)
+
+    if (!isSubmitRequest({ ...raw, lat: latNum, lng: lngNum })) {
+      return NextResponse.json(
+        { success: false, report_id: '', error: 'Invalid request body' },
+        { status: 400 },
+      )
+    }
+
+    const body = { ...raw, lat: latNum, lng: lngNum } as SubmitRequest
+
+    if (!body.report_id_human) {
+      console.warn('[Submit] WARNING: report_id_human is missing from payload')
+    }
+
     const reportId =
+      body.report_id_human ??
       'NMR-' +
-      new Date().toISOString().slice(0, 10).replace(/-/g, '') +
-      '-' +
-      body.report_hash.slice(0, 4).toUpperCase()
+        new Date().toISOString().slice(0, 10).replace(/-/g, '') +
+        '-' +
+        body.report_hash.slice(0, 4).toUpperCase()
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -114,13 +161,16 @@ export async function POST(request: NextRequest): Promise<NextResponse<SubmitRes
       auth: { persistSession: false, autoRefreshToken: false },
     })
 
+    const image_url =
+      typeof raw.image_url === 'string' ? raw.image_url : null
+
     const { count } = await supabase
       .from('reports')
       .select('id', { count: 'exact', head: true })
-      .gte('lat', body.lat - 0.00045)
-      .lte('lat', body.lat + 0.00045)
-      .gte('lng', body.lng - 0.00055)
-      .lte('lng', body.lng + 0.00055)
+      .gte('lat', latNum - 0.00045)
+      .lte('lat', latNum + 0.00045)
+      .gte('lng', lngNum - 0.00055)
+      .lte('lng', lngNum + 0.00055)
       .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
 
     if ((count ?? 0) >= 5) {
@@ -131,23 +181,23 @@ export async function POST(request: NextRequest): Promise<NextResponse<SubmitRes
     }
 
     const insertPayload: ReportInsert = {
-      lat: body.lat,
-      lng: body.lng,
+      lat: latNum,
+      lng: lngNum,
       ward_name: body.ward_name,
       issue_type: body.issue_type,
       severity: body.severity,
       description: body.description,
-      image_url: null,
+      image_url: image_url ?? null,
       report_hash: body.report_hash,
       report_id_human: reportId,
-      status: 'open',
+      status: safeStatus as 'open',
       email_draft: body.email_draft,
       email_subject: body.email_subject,
       email_recipient: body.email_recipient,
       triage_level: body.triage_level,
       cluster_count: body.cluster_count,
       // PostGIS geography accepts EWKT; stored as Point(lng lat) in SRID 4326
-      location: `SRID=4326;POINT(${body.lng} ${body.lat})`,
+      location: `SRID=4326;POINT(${lngNum} ${latNum})`,
       locality_name: body.locality_name,
       pincode: body.pincode,
       nearest_landmark: body.nearest_landmark,

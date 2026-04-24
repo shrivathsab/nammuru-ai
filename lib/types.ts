@@ -166,6 +166,7 @@ export interface PublicReport {
   cluster_count: number;
   nearest_landmark: string | null;
   pincode: string | null;
+  image_url: string | null;
 }
 
 // ─── Supabase generated types (minimal — extend as schema grows) ───────────────

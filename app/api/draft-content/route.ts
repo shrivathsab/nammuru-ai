@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { resolveWard } from '@/lib/wards'
+import { reportUrl } from '@/lib/config'
 import type { DraftContentRequest, DraftContentResponse } from '@/lib/types'
 
 // ─── Rate limit ───────────────────────────────────────────────────────────────
@@ -122,12 +123,12 @@ As per ${legalRef}, the BBMP is legally obligated to maintain public infrastruct
 
 I respectfully request that the necessary remedial action be taken within ${deadline} of receipt of this communication.
 
-We trust this matter will receive your immediate attention. This report has been filed on the NammuruAI civic platform and is publicly documented at nammuru.ai/report/${reportId}. We reserve the right to escalate via RTI if no action is taken within the stated timeframe.
+We trust this matter will receive your immediate attention. This report has been filed on the NammuruAI civic platform and is publicly documented at ${reportUrl(reportId)}. We reserve the right to escalate via RTI if no action is taken within the stated timeframe.
 
 Concerned Citizen of Bengaluru
 Filed via NammuruAI Civic Platform
 Report ID: ${reportId}
-Public record: nammuru.ai/report/${reportId}`
+Public record: ${reportUrl(reportId)}`
 }
 
 function buildFallbackTweets(reportId: string, req: DraftContentRequest): {
@@ -135,12 +136,12 @@ function buildFallbackTweets(reportId: string, req: DraftContentRequest): {
   reply_evidence: string
   reply_escalation: string
 } {
-  const primary = `${req.issue_type} reported at ${req.locality}, ${req.ward_name}. Filed on NammuruAI (${req.triage_label}). Report ${reportId}: nammuru.ai/report/${reportId}`
+  const primary = `${req.issue_type} reported at ${req.locality}, ${req.ward_name}. Filed on NammuruAI (${req.triage_label}). Report ${reportId}: ${reportUrl(reportId)}`
   const evidence =
     req.cluster_count > 1
       ? `${req.cluster_count} citizens have reported this location in the last 7 days. GPS: ${req.lat}, ${req.lng}.`
       : `GPS: ${req.lat}, ${req.lng}. Photo evidence attached on the public record.`
-  const escalation = `If no action within ${deadlineShort(req.triage_level)}, we will escalate via RTI. Public record: nammuru.ai/report/${reportId}`
+  const escalation = `If no action within ${deadlineShort(req.triage_level)}, we will escalate via RTI. Public record: ${reportUrl(reportId)}`
   return { primary, reply_evidence: evidence, reply_escalation: escalation }
 }
 
@@ -262,7 +263,7 @@ Civic urgency — factual but human. Max 240 characters.
 Must include: issue type, locality, report ID, public URL.
 Format: one punchy tweet. No hashtag spam. Maximum 2 hashtags.
 Do NOT auto-tag @BBMP_OFFICIAL — leave that to the user.
-Public URL format: nammuru.ai/report/[reportId]
+Public URL format: ${reportUrl('[reportId]')}
 
 Return ONLY valid JSON. No markdown. No backticks. No preamble.`
 
@@ -294,13 +295,13 @@ EMAIL must include:
 5. Closing: "We trust this matter will receive your immediate
    attention. This report has been filed on the NammuruAI civic
    platform and is publicly documented at
-   nammuru.ai/report/${reportId}. We reserve the right to escalate
+   ${reportUrl(reportId)}. We reserve the right to escalate
    via RTI if no action is taken within the stated timeframe."
 6. Sign-off:
    "Concerned Citizen of Bengaluru
    Filed via NammuruAI Civic Platform
    Report ID: ${reportId}
-   Public record: nammuru.ai/report/${reportId}"
+   Public record: ${reportUrl(reportId)}"
 
 TWEET STRICT CHARACTER BUDGET — Twitter limit is 280 chars total.
 Twitter auto-shortens ALL URLs to exactly 23 chars (t.co wrapping).
@@ -336,7 +337,7 @@ BAD (too verbose):
 Tweet format (strict order):
 [emoji] [verb] [issue] at [locality]. [deadline].
 📍 ${googleMapsUrl}
-📋 nammuru.ai/report/${reportId}
+📋 ${reportUrl(reportId)}
 ${allHandles}
 ${allHashtags}
 

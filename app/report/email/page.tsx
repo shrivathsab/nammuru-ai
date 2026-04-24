@@ -14,8 +14,48 @@ import {
   ExternalLink,
 } from 'lucide-react'
 
+import { createClient } from '@supabase/supabase-js'
+
 import type { DraftContentResponse } from '@/lib/types'
 import { AppShell } from '@/components/AppShell'
+
+const supabaseClient = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+)
+
+async function uploadReportImage(
+  base64DataUrl: string,
+  reportHash: string,
+): Promise<string | null> {
+  try {
+    const res = await fetch(base64DataUrl)
+    const blob = await res.blob()
+
+    const fileName = `reports/${reportHash.slice(0, 16)}.webp`
+
+    const { error } = await supabaseClient.storage
+      .from('report-images')
+      .upload(fileName, blob, {
+        contentType: 'image/webp',
+        upsert: true,
+      })
+
+    if (error) {
+      console.warn('[Image upload] Failed:', error.message)
+      return null
+    }
+
+    const { data } = supabaseClient.storage
+      .from('report-images')
+      .getPublicUrl(fileName)
+
+    return data.publicUrl
+  } catch (e) {
+    console.warn('[Image upload] Error:', e)
+    return null
+  }
+}
 import { ReportIdBadge } from '@/components/ui/ReportIdBadge'
 import { TealSpinner } from '@/components/ui/TealSpinner'
 import { tokens } from '@/lib/design-tokens'
@@ -182,23 +222,91 @@ export default function EmailDraftPage() {
     if (state.kind !== 'ready' || submittedRef.current) return
     submittedRef.current = true
     setSubmitStatus('saving')
-    fetch('/api/submit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...state.report,
-        email_draft: editedBody,
-        report_id: state.draft.report_id,
-        recipient_email: state.draft.recipient_email,
-        cc_emails: state.draft.cc_emails,
-        subject: state.draft.subject,
-        tweet_primary: state.draft.tweet.primary,
-        tweet_reply_evidence: state.draft.tweet.reply_evidence,
-        tweet_reply_escalation: state.draft.tweet.reply_escalation,
-      }),
+
+    const draft = JSON.parse(
+      sessionStorage.getItem('nammuru_report_draft') ?? '{}'
+    )
+    const data = {
+      report_id: state.draft.report_id,
+      subject: state.draft.subject,
+      body: editedBody,
+      recipient_email: state.draft.recipient_email,
+      tweet: state.draft.tweet,
+    }
+
+    ;(async () => {
+    const capturedImageUrl = draft.captured_image_url
+    const imageUrl = capturedImageUrl
+      ? await uploadReportImage(capturedImageUrl, draft.report_hash)
+      : null
+
+    console.log('[Image upload] result:', imageUrl)
+
+    const submitPayload = {
+      // Core location fields
+      lat:           draft.lat,
+      lng:           draft.lng,
+      ward_name:     draft.ward_name,
+      ward_zone:     draft.ward_zone,
+      locality_name: draft.locality_name ?? draft.locality ?? null,
+      pincode:       draft.pincode ?? null,
+      nearest_landmark: draft.nearest_landmark ?? null,
+      manual_location:  draft.manual_location ?? false,
+
+      // Issue fields
+      issue_type:    draft.issue_type,
+      severity:      draft.severity,
+      triage_level:  draft.triage_level,
+      cluster_count: draft.cluster_count ?? 1,
+      description:   draft.description,
+
+      // Report identity
+      report_hash:     draft.report_hash,
+      report_id_human: data.report_id,
+      status:          'open',
+
+      // Email fields
+      email_subject:   data.subject,
+      email_draft:     data.body,
+      email_recipient: data.recipient_email,
+
+      // Tweet fields
+      tweet_primary:          data.tweet.primary,
+      tweet_reply_evidence:   data.tweet.reply_evidence,
+      tweet_reply_escalation: data.tweet.reply_escalation,
+
+      // Flags
+      private_property_detected: draft.private_property_detected ?? false,
+
+      // Image
+      image_url: imageUrl,
+    }
+
+    console.log('[Submit payload] report_id_human:', state.draft.report_id)
+
+    console.log('[Submit payload fields]', {
+      lat:          submitPayload.lat,
+      lng:          submitPayload.lng,
+      issue_type:   submitPayload.issue_type,
+      report_hash:  submitPayload.report_hash,
+      report_id_human: submitPayload.report_id_human,
+      locality_name:   submitPayload.locality_name,
     })
-      .then((r) => setSubmitStatus(r.ok ? 'saved' : 'failed'))
-      .catch(() => setSubmitStatus('failed'))
+
+    try {
+      const r = await fetch('/api/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(submitPayload),
+      })
+      const d = await r.json().catch(() => ({}))
+      console.log('[Submit result]', JSON.stringify(d))
+      setSubmitStatus(r.ok ? 'saved' : 'failed')
+    } catch (e) {
+      console.error('[Submit error]', e instanceof Error ? e.message : String(e))
+      setSubmitStatus('failed')
+    }
+    })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.kind])
 

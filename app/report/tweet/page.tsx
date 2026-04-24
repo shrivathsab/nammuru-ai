@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 
 import { AppShell } from '@/components/AppShell'
+import { reportUrl, reportDisplayUrl } from '@/lib/config'
 import { tokens } from '@/lib/design-tokens'
 
 const TEAL = tokens.colors.teal
@@ -95,12 +96,14 @@ export default function TweetPage() {
     []
   )
 
-  const publicUrl =
-    state.kind === 'ready'
-      ? `nammuru.ai/report/${state.draft.report_id_human}`
-      : ''
-
   const draft = state.kind === 'ready' ? state.draft : null
+  const reportId = draft?.report_id_human
+  const publicUrl = reportId
+    ? reportUrl(reportId)
+    : null
+  const publicUrlDisplay = reportId
+    ? reportDisplayUrl(reportId)
+    : null
   const capturedImage = draft?.captured_image_url ?? null
 
   const charCount = tweetText.length
@@ -397,22 +400,29 @@ export default function TweetPage() {
                 </span>
               </div>
 
-              <div style={{
-                background: DARK3,
-                borderRadius: '0.5rem',
-                padding: '0.625rem 0.875rem',
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: '0.82rem',
-                color: TEAL,
-                userSelect: 'all',
-                wordBreak: 'break-all',
-                border: `1px solid rgba(15,110,86,0.2)`,
-              }}>
-                {publicUrl}
-              </div>
+              {publicUrl ? (
+                <div style={{
+                  background: DARK3,
+                  borderRadius: '0.5rem',
+                  padding: '0.625rem 0.875rem',
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: '0.82rem',
+                  color: TEAL,
+                  userSelect: 'all',
+                  wordBreak: 'break-all',
+                  border: `1px solid rgba(15,110,86,0.2)`,
+                }}>
+                  {publicUrlDisplay}
+                </div>
+              ) : (
+                <p className="text-xs text-amber-500">
+                  Report ID not found — submit the report first via the email page.
+                </p>
+              )}
 
               <button
-                onClick={() => void copyText(`https://${publicUrl}`, setCopiedUrl)}
+                disabled={!publicUrl}
+                onClick={() => publicUrl && void copyText(publicUrl, setCopiedUrl)}
                 style={{
                   alignSelf: 'flex-start',
                   display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
