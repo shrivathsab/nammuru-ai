@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 
+import MiniMap from '@/components/MiniMap'
 import { CopyButton } from '@/components/ui/CopyButton'
 import { LocationBlock } from '@/components/ui/LocationBlock'
 import { ReportIdBadge } from '@/components/ui/ReportIdBadge'
@@ -396,30 +397,38 @@ export default async function PublicReportPage({ params }: PageParams) {
             zone={report.ward_zone ?? undefined}
           />
 
-          <a
-            href={mapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.375rem',
-              color: TEAL,
-              fontSize: '0.85rem',
-              textDecoration: 'none',
-              fontFamily: tokens.fonts.sans,
-              fontWeight: 500,
-            }}
-          >
-            View on Google Maps <ExternalLink size={12} />
-          </a>
-
           <div style={{
             fontFamily: tokens.fonts.mono,
             color: TEXT_MUTED,
             fontSize: '0.72rem',
           }}>
             {report.lat.toFixed(6)}, {report.lng.toFixed(6)}
+          </div>
+
+          <div style={{ marginTop: 16 }}>
+            <MiniMap
+              lat={report.lat}
+              lng={report.lng}
+              wardName={report.ward_name}
+              zoom={15}
+              height="260px"
+              showAttribution
+            />
+            <div style={{
+              display: 'flex', justifyContent: 'space-between',
+              marginTop: 8, fontSize: 12, fontFamily: tokens.fonts.sans,
+            }}>
+              <a href={mapsUrl}
+                 target="_blank"
+                 rel="noopener noreferrer"
+                 style={{ color: TEAL, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                Open in Google Maps <ExternalLink size={12} />
+              </a>
+              <a href={`/map?focus=${displayReportId}`}
+                 style={{ color: TEAL, textDecoration: 'none' }}>
+                See on live map →
+              </a>
+            </div>
           </div>
         </section>
 

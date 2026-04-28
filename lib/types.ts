@@ -28,6 +28,7 @@ export interface Report {
   status: ReportStatus
   email_draft: string | null
   tweet_thread: TweetThread | null
+  forwarded_channels: Array<{ channel: string; at: string }> | null
   // geography column is PostGIS-managed; omit from client reads
 }
 

@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { resolveWard } from '@/lib/wards'
+import { resolveChannels } from '@/lib/routing'
 import { reportUrl } from '@/lib/config'
 import type { DraftContentRequest, DraftContentResponse } from '@/lib/types'
 
@@ -207,10 +208,24 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const ward = resolveWard(locality)
     const recipientName = ward.officer_name
     const recipientEmail = ward.officer_email
+    const routing = resolveChannels({
+      issueType: issue_type,
+      wardName: ward_name,
+      wardZone: ward_zone,
+      triageLevel: triage_level as 1 | 2 | 3,
+    })
+
     const ccEmails = [
-      `bbmp.${ward.zone.toLowerCase()}@bbmp.gov.in`,
-      'grievance@bbmp.gov.in',
+      ...routing.primary
+        .filter((c) => c.type === 'email')
+        .map((c) => c.contact),
+      ...routing.escalation
+        .filter((c) => c.type === 'email')
+        .map((c) => c.contact),
+      'comm@bbmp.gov.in',
     ]
+
+    const uniqueCc = Array.from(new Set(ccEmails))
 
     // STEP 4: Google Maps URL
     const googleMapsUrl = `https://maps.google.com/?q=${lat},${lng}`
@@ -394,7 +409,7 @@ Return this exact JSON structure:
       body: emailBody,
       recipient_name: recipientName,
       recipient_email: recipientEmail,
-      cc_emails: ccEmails,
+      cc_emails: uniqueCc,
       report_id: reportId,
       google_maps_url: googleMapsUrl,
       tweet: {

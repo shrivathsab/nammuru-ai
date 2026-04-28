@@ -16,7 +16,15 @@ import { resizeImage } from '@/lib/imageResize'
 import type { ClassifyResponse } from '@/lib/types'
 import { AppShell } from '@/components/AppShell'
 import { LocationBlock } from '@/components/ui/LocationBlock'
+import MiniMap from '@/components/MiniMap'
 import { tokens } from '@/lib/design-tokens'
+
+interface NearbyReport {
+  id: string
+  lat: number
+  lng: number
+  triage_level: number
+}
 
 // ─── Design tokens (aliased for inline styles) ───────────────────────────────
 
@@ -130,6 +138,7 @@ export default function ReportPage() {
   const [imageDataUrl, setImageDataUrl]             = useState<string | null>(null)
   const [analysisResult, setAnalysisResult]         = useState<ClassifyResponse | null>(null)
   const [analyzeError, setAnalyzeError]             = useState<string | null>(null)
+  const [nearbyReports, setNearbyReports]           = useState<NearbyReport[]>([])
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -277,6 +286,23 @@ export default function ReportPage() {
       setStep('preview')
     }
   }, [imageDataUrl, coords, manualLocation])
+
+  // ── Fetch nearby reports once classify succeeds ───────────────────────────
+
+  useEffect(() => {
+    if (!analysisResult?.is_valid || !coords) {
+      setNearbyReports([])
+      return
+    }
+    let cancelled = false
+    fetch(`/api/nearby-reports?lat=${coords.lat}&lng=${coords.lng}&radius=200`)
+      .then(r => r.json())
+      .then((data: { reports?: NearbyReport[] }) => {
+        if (!cancelled) setNearbyReports(data.reports ?? [])
+      })
+      .catch(() => { if (!cancelled) setNearbyReports([]) })
+    return () => { cancelled = true }
+  }, [analysisResult, coords])
 
   // ── Persist draft to sessionStorage for /report/email ─────────────────────
 
@@ -862,13 +888,47 @@ export default function ReportPage() {
                       </div>
                     )}
 
+                    {coords && (
+                      <div style={{ marginTop: 8 }}>
+                        <div style={{
+                          fontFamily: "'JetBrains Mono', monospace",
+                          color: '#8a9e96',
+                          fontSize: 10,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.1em',
+                          marginBottom: 8,
+                        }}>
+                          YOUR LOCATION
+                        </div>
+                        <MiniMap
+                          lat={coords.lat}
+                          lng={coords.lng}
+                          wardName={analysisResult.ward_name ?? undefined}
+                          nearbyReports={nearbyReports}
+                          zoom={15}
+                          height="200px"
+                        />
+                        {nearbyReports.length > 0 && (
+                          <p style={{
+                            color: GOLD,
+                            fontFamily: "'DM Sans', sans-serif",
+                            fontSize: 12,
+                            marginTop: 8,
+                          }}>
+                            <Users size={12} style={{ display: 'inline', marginRight: 4 }} />
+                            {nearbyReports.length} reports within 200m in the last 30 days
+                          </p>
+                        )}
+                      </div>
+                    )}
+
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
                       <Link
                         href="/report/email"
                         className="btn-teal-glow"
                         style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', borderRadius: '9999px', fontWeight: 600, color: 'white', background: TEAL, minHeight: '52px', border: 'none', cursor: 'pointer', fontSize: '1rem', fontFamily: "'DM Sans', sans-serif", textDecoration: 'none' }}
                       >
-                        Draft Email to BBMP →
+                        Compose Letter to BBMP →
                       </Link>
                       <button
                         onClick={reportAnother}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import {
   Camera,
@@ -15,8 +16,30 @@ import {
   Monitor,
   Menu,
   X,
-  ChevronDown,
 } from 'lucide-react'
+
+import MiniMap from '@/components/MiniMap'
+import { BENGALURU_BOUNDS } from '@/lib/ward-aliases'
+
+const HomepageMiniMap = dynamic(
+  () => import('@/components/HomepageMiniMap'),
+  {
+    ssr: false,
+    loading: () => (
+      <div style={{
+        height: '100%',
+        background: '#0e1a15',
+        borderRadius: 16,
+        border: '1px solid rgba(15,110,86,0.3)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <span style={{ color: '#8a9e96', fontSize: 13 }}>
+          Loading live map...
+        </span>
+      </div>
+    ),
+  }
+)
 
 const TEAL = '#0F6E56'
 const TEAL_LIGHT = '#1a9b78'
@@ -279,6 +302,20 @@ export default function HomePage() {
               <a href="#how-it-works" onClick={scrollToSection('how-it-works')} className="nav-link" style={{ color: TEXT_MUTED, fontSize: '0.875rem' }}>How It Works</a>
               <a href="#coverage" className="nav-link" style={{ color: TEXT_MUTED, fontSize: '0.875rem' }}>Coverage</a>
               <a href="#about" className="nav-link" style={{ color: TEXT_MUTED, fontSize: '0.875rem' }}>About</a>
+              <Link href="/map" style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                background: 'rgba(15,110,86,0.1)',
+                border: '1px solid rgba(15,110,86,0.4)',
+                color: '#0F6E56',
+                padding: '8px 16px', borderRadius: 24,
+                fontFamily: 'DM Sans', fontSize: 13, fontWeight: 500,
+                textDecoration: 'none',
+                transition: 'background 0.2s',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(15,110,86,0.2)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(15,110,86,0.1)'; }}>
+                📍 Live Map
+              </Link>
               <Link href="/report" className="btn-glow" style={{ background: TEAL, color: 'white', padding: '0.5rem 1.25rem', borderRadius: '9999px', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 500 }}>
                 Report an Issue →
               </Link>
@@ -297,60 +334,153 @@ export default function HomePage() {
             {[['How It Works', '#how-it-works'], ['Coverage', '#coverage'], ['About', '#about']].map(([label, href]) => (
               <a key={label} href={href} onClick={() => setMobileOpen(false)} style={{ color: TEXT_PRIMARY, textDecoration: 'none', fontSize: '1.25rem' }}>{label}</a>
             ))}
+            <Link href="/map" onClick={() => setMobileOpen(false)} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: 'rgba(15,110,86,0.1)',
+              border: '1px solid rgba(15,110,86,0.4)',
+              color: '#0F6E56',
+              padding: '10px 22px', borderRadius: 24,
+              fontFamily: 'DM Sans', fontSize: 15, fontWeight: 500,
+              textDecoration: 'none',
+            }}>📍 Live Map</Link>
             <Link href="/report" onClick={() => setMobileOpen(false)} style={{ background: TEAL, color: 'white', padding: '0.75rem 2.5rem', borderRadius: '9999px', textDecoration: 'none', fontSize: '1rem', fontWeight: 600 }}>Report an Issue →</Link>
           </div>
         )}
 
         {/* ── SECTION 1 — HERO ───────────────────────────────────── */}
-        <section style={{ minHeight: '100vh', background: DARK, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden', paddingTop: '64px' }} className="noise">
-          {/* Mesh blobs */}
-          <div className="drift1" style={{ position: 'absolute', width: '600px', height: '600px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(15,110,86,0.1) 0%, transparent 70%)', top: '5%', left: '-15%', pointerEvents: 'none' }} />
-          <div className="drift2" style={{ position: 'absolute', width: '500px', height: '500px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(15,110,86,0.08) 0%, transparent 70%)', bottom: '5%', right: '-10%', pointerEvents: 'none' }} />
+        <section style={{
+          minHeight: '100vh',
+          background: '#080f0c',
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: 48,
+          padding: '120px 48px 80px',
+          alignItems: 'center',
+        }} className="hero-grid">
 
-          <div style={{ maxWidth: '800px', margin: '0 auto', padding: '4rem 1.5rem 5rem', textAlign: 'center', position: 'relative', zIndex: 1 }}>
-            {/* Badge */}
-            <div className="h1" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', border: `1px solid rgba(15,110,86,0.4)`, borderRadius: '9999px', padding: '0.375rem 1rem', fontSize: '0.75rem', color: TEAL_LIGHT, background: 'rgba(15,110,86,0.08)', marginBottom: '1.75rem' }}>
-              <span className="pulse" style={{ width: '6px', height: '6px', borderRadius: '50%', background: TEAL, display: 'inline-block', flexShrink: 0 }} />
-              Bengaluru's First AI Civic Reporting Platform
+          {/* LEFT — text + CTAs */}
+          <div style={{ maxWidth: 520 }}>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              background: 'rgba(15,110,86,0.15)',
+              border: '1px solid rgba(15,110,86,0.4)',
+              padding: '6px 14px', borderRadius: 24,
+              color: '#0F6E56', fontSize: 13,
+              fontFamily: 'DM Sans', fontWeight: 500,
+              marginBottom: 24,
+            }}>
+              <span style={{
+                width: 6, height: 6, borderRadius: '50%',
+                background: '#0F6E56',
+                animation: 'pulse 2s infinite',
+              }} />
+              Bengaluru's first AI civic platform
             </div>
 
-            {/* Heading */}
-            <h1 className="h2 font-display" style={{ fontSize: 'clamp(2.5rem, 5.5vw, 4rem)', fontWeight: 900, lineHeight: 1.08, color: TEXT_PRIMARY, marginBottom: '1.5rem' }}>
-              Report civic issues.<br />
-              <em style={{ color: TEAL, fontStyle: 'italic' }}>Claude</em> handles<br />
-              the paperwork.
+            <h1 style={{
+              fontFamily: 'Playfair Display',
+              color: '#f0ede8',
+              fontSize: '3.25rem',
+              lineHeight: 1.15,
+              marginBottom: 20,
+            }}>
+              Report civic issues.<br/>
+              <span style={{ color: '#0F6E56', fontStyle: 'italic' }}>
+                Make BBMP
+              </span>{' '}
+              accountable.
             </h1>
 
-            {/* Sub */}
-            <p className="h3" style={{ fontSize: '1.0625rem', color: TEXT_MUTED, maxWidth: '580px', margin: '0 auto 2rem', lineHeight: 1.75 }}>
-              Capture a photo. AI verifies the issue, assigns urgency, and drafts a formal legal letter to your BBMP ward officer — complete with statutory references. In 30 seconds.
+            <p style={{
+              color: '#8a9e96',
+              fontFamily: 'DM Sans',
+              fontSize: 17,
+              lineHeight: 1.6,
+              marginBottom: 32,
+            }}>
+              Capture a photo. AI verifies, classifies, drafts a formal
+              legal letter, and routes to the right BBMP officer — in
+              30 seconds. Every report becomes a public record on the
+              Bengaluru civic map.
             </p>
 
-            {/* CTAs */}
-            <div className="h4" style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'center', marginBottom: '2rem' }}>
-              <Link href="/report" className="btn-glow" style={{ background: TEAL, color: 'white', padding: '0.875rem 2rem', borderRadius: '9999px', textDecoration: 'none', fontSize: '1rem', fontWeight: 600 }}>
-                Report an Issue →
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 28 }}>
+              <Link href="/report" style={{
+                background: '#0F6E56', color: 'white',
+                padding: '14px 28px', borderRadius: 40,
+                fontFamily: 'DM Sans', fontSize: 15, fontWeight: 600,
+                textDecoration: 'none',
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+              }}>
+                File a Report →
               </Link>
-              <a href="#how-it-works" onClick={scrollToSection('how-it-works')} style={{ background: 'transparent', color: 'white', padding: '0.875rem 2rem', borderRadius: '9999px', textDecoration: 'none', fontSize: '1rem', fontWeight: 500, border: '1px solid rgba(255,255,255,0.28)', transition: 'background 0.2s' }}>
-                See How It Works ↓
-              </a>
+
+              <Link href="/map" style={{
+                background: 'transparent', color: '#f0ede8',
+                padding: '14px 28px', borderRadius: 40,
+                border: '1px solid rgba(15,110,86,0.5)',
+                fontFamily: 'DM Sans', fontSize: 15, fontWeight: 500,
+                textDecoration: 'none',
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+              }}>
+                📍 Explore the Map →
+              </Link>
             </div>
 
-            {/* Trust signals */}
-            <div className="h5" style={{ display: 'flex', flexWrap: 'wrap', gap: '1.25rem', justifyContent: 'center', fontSize: '0.8125rem', color: TEXT_MUTED }}>
+            <div style={{
+              display: 'flex', gap: 16, color: '#8a9e96',
+              fontFamily: 'DM Sans', fontSize: 13, flexWrap: 'wrap',
+            }}>
               <span>✓ Claude Vision verified</span>
-              <span style={{ opacity: 0.3 }}>·</span>
+              <span>·</span>
               <span>✓ BBMP Act citations</span>
-              <span style={{ opacity: 0.3 }}>·</span>
-              <span>✓ Free to use</span>
+              <span>·</span>
+              <span>✓ 225 wards covered</span>
             </div>
           </div>
 
-          {/* Scroll indicator */}
-          <div className="bounce" style={{ position: 'absolute', bottom: '2rem', left: '50%', transform: 'translateX(-50%)', color: TEXT_MUTED }}>
-            <ChevronDown size={22} />
+          {/* RIGHT — live mini-map */}
+          <div style={{
+            position: 'relative',
+            height: 'min(560px, 70vh)',
+            borderRadius: 16,
+            overflow: 'hidden',
+            border: '1px solid rgba(15,110,86,0.3)',
+            boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
+          }}>
+            <HomepageMiniMap />
+
+            {/* Floating "Open Full Map" button bottom-right of the map */}
+            <Link href="/map" style={{
+              position: 'absolute', bottom: 16, right: 16,
+              background: 'rgba(8,15,12,0.85)',
+              backdropFilter: 'blur(8px)',
+              color: '#f0ede8',
+              padding: '8px 16px', borderRadius: 24,
+              border: '1px solid rgba(15,110,86,0.5)',
+              fontFamily: 'DM Sans', fontSize: 13, fontWeight: 500,
+              textDecoration: 'none',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              zIndex: 1000,
+            }}>
+              Open Full Map →
+            </Link>
           </div>
         </section>
+
+        {/* Mobile: stack columns */}
+        <style>{`
+          @media (max-width: 900px) {
+            .hero-grid {
+              grid-template-columns: 1fr !important;
+              padding: 100px 20px 60px !important;
+            }
+          }
+          @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50%       { opacity: 0.5; transform: scale(1.4); }
+          }
+        `}</style>
 
         {/* ── SECTION 2 — HOW IT WORKS ───────────────────────────── */}
         <section id="how-it-works" style={{ background: DARK2, padding: '120px 1.5rem' }}>
@@ -450,6 +580,117 @@ export default function HomePage() {
               </div>
             </div>
           </div>
+        </section>
+
+        {/* ── SECTION 3.5 — WARD ACCOUNTABILITY ──────────────────── */}
+        <section id="accountability" style={{
+          background: '#0e1a15',
+          padding: '100px 24px',
+        }}>
+          <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+            <div style={{ textAlign: 'center', marginBottom: 48 }}>
+              <p style={{
+                color: '#d4a843', fontSize: 12,
+                letterSpacing: '0.15em', textTransform: 'uppercase',
+                fontFamily: 'JetBrains Mono', marginBottom: 16,
+              }}>
+                WARD ACCOUNTABILITY
+              </p>
+              <h2 style={{
+                fontFamily: 'Playfair Display',
+                color: '#f0ede8',
+                fontSize: '2.5rem',
+                lineHeight: 1.2,
+                marginBottom: 16,
+              }}>
+                Every report on the map. Forever.
+              </h2>
+              <p style={{
+                color: '#8a9e96', fontFamily: 'DM Sans',
+                fontSize: 16, maxWidth: 560, margin: '0 auto',
+                lineHeight: 1.6,
+              }}>
+                Officers see their ward's accountability score update
+                in real time. So does everyone else. Reports stay public
+                until BBMP responds or escalates.
+              </p>
+            </div>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1.4fr 1fr',
+              gap: 40,
+              alignItems: 'center',
+            }} className="acc-grid">
+
+              <div style={{
+                height: 460,
+                borderRadius: 16,
+                overflow: 'hidden',
+                border: '1px solid rgba(15,110,86,0.3)',
+                boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
+              }}>
+                <MiniMap
+                  lat={12.9116}
+                  lng={77.6370}
+                  zoom={14}
+                  wardName="HSR Layout Ward"
+                  height="100%"
+                  interactive={true}
+                  showAttribution={true}
+                  maxBounds={BENGALURU_BOUNDS}
+                />
+              </div>
+
+              <div>
+                <div style={{ marginBottom: 28 }}>
+                  <div style={{
+                    color: '#0F6E56', fontFamily: 'JetBrains Mono',
+                    fontSize: 11, letterSpacing: '0.1em',
+                    textTransform: 'uppercase', marginBottom: 8,
+                  }}>HEALTH SCORE</div>
+                  <div style={{
+                    fontFamily: 'Playfair Display', fontSize: 56,
+                    color: '#d97706', lineHeight: 1, marginBottom: 4,
+                    fontWeight: 700,
+                  }}>61</div>
+                  <div style={{ color: '#8a9e96', fontSize: 13 }}>
+                    HSR Layout Ward · Bommanahalli Zone
+                  </div>
+                </div>
+
+                <ul style={{
+                  listStyle: 'none', padding: 0, margin: 0,
+                  color: '#f0ede8', fontFamily: 'DM Sans',
+                  fontSize: 14, lineHeight: 2,
+                }}>
+                  <li>⚡ <span style={{ color: '#e53e3e' }}>2</span> Urgent open</li>
+                  <li>⏱ <span style={{ color: '#d97706' }}>5</span> Medium open</li>
+                  <li>✓ <span style={{ color: '#0F6E56' }}>8</span> Resolved this week</li>
+                  <li>⚠️ <span style={{ color: '#e53e3e' }}>1</span> Escalated past SLA</li>
+                </ul>
+
+                <Link href="/map" style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  marginTop: 28,
+                  background: '#0F6E56', color: 'white',
+                  padding: '12px 24px', borderRadius: 40,
+                  fontFamily: 'DM Sans', fontSize: 14, fontWeight: 600,
+                  textDecoration: 'none',
+                }}>
+                  Explore the full map →
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          <style>{`
+            @media (max-width: 900px) {
+              .acc-grid {
+                grid-template-columns: 1fr !important;
+              }
+            }
+          `}</style>
         </section>
 
         {/* ── SECTION 4 — EMAIL DRAFT PREVIEW ────────────────────── */}
@@ -619,15 +860,44 @@ export default function HomePage() {
                 { name: 'Whitefield', zone: 'East Zone' },
                 { name: 'Jayanagar', zone: 'South Zone' },
               ].map((w) => (
-                <div key={w.name} className="reveal card-lift" style={{ background: 'white', borderLeft: `3px solid ${TEAL}`, borderRadius: '0.5rem', padding: '1rem 1.25rem', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', minWidth: '180px' }}>
+                <Link
+                  key={w.name}
+                  href={`/map?ward=${encodeURIComponent(`${w.name} Ward`)}`}
+                  className="reveal card-lift"
+                  style={{
+                    display: 'block',
+                    background: 'white',
+                    borderLeft: `3px solid ${TEAL}`,
+                    borderRadius: '0.5rem',
+                    padding: '1rem 1.25rem',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.06)',
+                    minWidth: '180px',
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    transition: 'transform 0.15s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'none';
+                  }}
+                >
                   <div style={{ fontWeight: 500, color: '#111827', marginBottom: '0.375rem' }}>{w.name}</div>
                   <span style={{ background: TEAL, color: 'white', borderRadius: '9999px', padding: '0.15rem 0.625rem', fontSize: '0.64rem', fontWeight: 500 }}>{w.zone}</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginTop: '0.625rem', fontSize: '0.75rem', color: '#6b7280' }}>
-                    <MapPin size={12} style={{ color: TEAL }} />
-                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
-                    Active
+                  <div style={{
+                    display: 'flex', justifyContent: 'space-between',
+                    alignItems: 'center', marginTop: 8,
+                  }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: TEAL, fontSize: 11 }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+                      Active
+                    </span>
+                    <span style={{ color: TEAL, fontSize: 12 }}>
+                      View on map →
+                    </span>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
 
@@ -645,7 +915,7 @@ export default function HomePage() {
         <section ref={statsRef} style={{ background: DARK, padding: '80px 1.5rem' }}>
           <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
             <div className="four-col">
-              <CountUpStat target={5} label="Pilot Wards" active={statsInView} />
+              <CountUpStat target={225} label="Wards Monitored" active={statsInView} />
               <CountUpStat target={3} label="Triage Levels" active={statsInView} />
               <StatStatic value="48h" label="L1 Response SLA" />
               <CountUpStat target={1} label="Claude API Call Per Report" active={statsInView} />
@@ -682,20 +952,65 @@ export default function HomePage() {
         </section>
 
         {/* ── SECTION 9 — FINAL CTA ──────────────────────────────── */}
-        <section style={{ background: TEAL, padding: '120px 1.5rem', textAlign: 'center', position: 'relative', overflow: 'hidden' }} className="noise">
-          <div style={{ position: 'relative', zIndex: 1, maxWidth: '700px', margin: '0 auto' }}>
-            <h2 className="font-display reveal" style={{ fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: 900, color: 'white', lineHeight: 1.1, marginBottom: '1.25rem' }}>
-              See a civic issue?<br />Report it now.
+        <section style={{
+          background: '#0F6E56',
+          padding: '100px 24px',
+          textAlign: 'center',
+        }}>
+          <div style={{ maxWidth: 720, margin: '0 auto' }}>
+            <h2 style={{
+              fontFamily: 'Playfair Display',
+              color: 'white',
+              fontSize: '2.5rem',
+              lineHeight: 1.2,
+              marginBottom: 16,
+            }}>
+              See a civic issue?<br />
+              Or curious about your ward?
             </h2>
-            <p className="reveal" style={{ color: 'rgba(255,255,255,0.82)', fontSize: '1.0625rem', marginBottom: '2.5rem', lineHeight: 1.72 }}>
-              Takes 30 seconds. Claude handles the rest.<br />Free. No account required. Bengaluru only.
+            <p style={{
+              color: 'rgba(255,255,255,0.85)',
+              fontFamily: 'DM Sans',
+              fontSize: 17,
+              marginBottom: 36,
+            }}>
+              File a report in 30 seconds. Or browse the live map
+              to see what&apos;s happening across Bengaluru.
             </p>
-            <Link href="/report" className="btn-white reveal" style={{ display: 'inline-block', background: 'white', color: TEAL, padding: '1rem 2.5rem', borderRadius: '9999px', fontSize: '1.0625rem', fontWeight: 700, textDecoration: 'none' }}>
-              Report an Issue →
-            </Link>
-            <div className="reveal" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '1.5rem', marginTop: '2rem', fontSize: '0.8125rem', color: 'rgba(255,255,255,0.72)' }}>
+
+            <div style={{
+              display: 'flex', gap: 12, justifyContent: 'center',
+              flexWrap: 'wrap',
+            }}>
+              <Link href="/report" style={{
+                background: 'white', color: '#0F6E56',
+                padding: '16px 32px', borderRadius: 40,
+                fontFamily: 'DM Sans', fontSize: 16, fontWeight: 700,
+                textDecoration: 'none',
+              }}>
+                File a Report →
+              </Link>
+
+              <Link href="/map" style={{
+                background: 'transparent', color: 'white',
+                padding: '16px 32px', borderRadius: 40,
+                border: '2px solid white',
+                fontFamily: 'DM Sans', fontSize: 16, fontWeight: 600,
+                textDecoration: 'none',
+              }}>
+                📍 Browse Live Map →
+              </Link>
+            </div>
+
+            <div style={{
+              display: 'flex', gap: 16, justifyContent: 'center',
+              color: 'rgba(255,255,255,0.7)', marginTop: 24,
+              fontFamily: 'DM Sans', fontSize: 13, flexWrap: 'wrap',
+            }}>
               <span>🔒 No data sold</span>
-              <span>⚡ Powered by Claude AI</span>
+              <span>·</span>
+              <span>⚡ Powered by Claude</span>
+              <span>·</span>
               <span>🏛️ Formal legal letters</span>
             </div>
           </div>

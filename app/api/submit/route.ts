@@ -1,14 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '10mb',
-    },
-  },
-}
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface SubmitRequest {

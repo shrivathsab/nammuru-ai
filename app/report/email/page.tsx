@@ -511,14 +511,43 @@ export default function EmailDraftPage() {
                   </div>
                 </section>
 
-                {/* Next step — Tweet Thread */}
-                <Link
-                  href="/report/tweet"
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: '9999px', border: `1px solid rgba(212,168,67,0.45)`, background: 'rgba(212,168,67,0.05)', padding: '0.875rem 1.25rem', textDecoration: 'none', color: GOLD, fontFamily: "'DM Sans', sans-serif", fontWeight: 500, fontSize: '0.9375rem', transition: 'background 0.2s ease' }}
-                >
-                  <span>Generate Tweet Thread</span>
-                  <ArrowRight size={16} style={{ color: GOLD }} />
-                </Link>
+                {/* Next step — Amplify */}
+                {(() => {
+                  const reportId = state.draft.report_id
+                  const missing: string[] = []
+                  if (!reportId) missing.push('report ID')
+                  if (state.report.lat == null || state.report.lng == null) missing.push('location')
+                  if (!state.report.issue_type) missing.push('issue type')
+                  if (!state.report.ward_name) missing.push('ward')
+                  const disabled = missing.length > 0
+
+                  if (disabled) {
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                        <div
+                          aria-disabled="true"
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: '9999px', border: `1px solid rgba(212,168,67,0.25)`, background: 'rgba(212,168,67,0.03)', padding: '0.875rem 1.25rem', color: GOLD, fontFamily: "'DM Sans', sans-serif", fontWeight: 500, fontSize: '0.9375rem', opacity: 0.5, cursor: 'not-allowed' }}
+                        >
+                          <span>Continue to Amplify</span>
+                          <ArrowRight size={16} style={{ color: GOLD }} />
+                        </div>
+                        <span style={{ fontSize: '0.75rem', color: TEXT_MUTED, fontFamily: "'DM Sans', sans-serif" }}>
+                          Missing {missing.join(', ')} — cannot continue to Amplify.
+                        </span>
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <Link
+                      href={`/report/${reportId}/amplify`}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: '9999px', border: `1px solid rgba(212,168,67,0.45)`, background: 'rgba(212,168,67,0.05)', padding: '0.875rem 1.25rem', textDecoration: 'none', color: GOLD, fontFamily: "'DM Sans', sans-serif", fontWeight: 500, fontSize: '0.9375rem', transition: 'background 0.2s ease' }}
+                    >
+                      <span>Continue to Amplify</span>
+                      <ArrowRight size={16} style={{ color: GOLD }} />
+                    </Link>
+                  )
+                })()}
               </div>
             )}
 

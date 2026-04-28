@@ -5,7 +5,7 @@ import { tokens } from '@/lib/design-tokens'
 
 type Step = 1 | 2 | 3 | 4
 
-const STEP_LABELS = ['Capture', 'AI Verify', 'Draft Email', 'Share'] as const
+const STEP_LABELS = ['Capture', 'Verify', 'Compose', 'Amplify'] as const
 
 interface AppShellProps {
   children: React.ReactNode
