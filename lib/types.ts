@@ -16,20 +16,52 @@ export type ReportStatus = 'open' | 'in_progress' | 'resolved'
 
 export interface Report {
   id: string
-  created_at: string          // ISO-8601 timestamptz
+  created_at: string
   lat: number
   lng: number
-  ward_name: string
-  issue_type: IssueType | string
-  severity: Severity
+  ward_name: string | null
+  issue_type: string | null
+  severity: string | null
   description: string | null
   image_url: string | null
   report_hash: string | null
-  status: ReportStatus
+  status: string
   email_draft: string | null
-  tweet_thread: TweetThread | null
+  email_subject: string | null
+  email_recipient: string | null
+  location: unknown | null
+  cluster_id: string | null
+  triage_level: number
+  cluster_count: number
+  locality_name: string | null
+  pincode: string | null
+  nearest_landmark: string | null
+  manual_location: boolean | null
+  report_id_human: string | null
+
+  tweet_primary: string | null
+  tweet_reply_evidence: string | null
+  tweet_reply_escalation: string | null
+
+  citizen_email: string | null
+  officer_token: string | null
+  status_history: Array<{ status: string; at: string }> | null
+  resolved_at: string | null
+  acknowledged_at: string | null
+  escalated_at: string | null
+  last_followup_at: string | null
+  escalation_level: number | null
+  rti_draft: string | null
+  rti_generated_at: string | null
   forwarded_channels: Array<{ channel: string; at: string }> | null
-  // geography column is PostGIS-managed; omit from client reads
+
+  image_phash: string | null
+
+  resolution_image_url: string | null
+  resolved_by: 'community_ai' | 'cron_system' | 'officer' | 'manual' | null
+  resolution_confidence: number | null
+  resolution_note: string | null
+  resolution_attempts: number | null
 }
 
 export interface TweetThread {
@@ -102,6 +134,7 @@ export interface ClassifyResponse {
   jurisdiction_flag: JurisdictionFlag | null;
   location_verified: boolean | null;
   report_hash: string | null;
+  image_phash: string | null;
 }
 
 // ─── Draft Content (email + tweet) ────────────────────────────────────────────
@@ -142,6 +175,25 @@ export interface DraftContentResponse {
   google_maps_url: string;
   // Tweet fields
   tweet: TweetContent;
+  officer_token: string;
+}
+
+// ─── Verify Resolution ────────────────────────────────────────────────────────
+
+export interface VerifyResolutionRequest {
+  report_id_human: string;
+  image_base64: string;
+  lat: number;
+  lng: number;
+}
+
+export interface VerifyResolutionResponse {
+  verified: boolean;
+  confidence: number;
+  status: 'resolved' | 'likely_resolved' | 'unverified' | 'error';
+  ai_evidence: string;
+  user_message: string;
+  report_id_human: string;
 }
 
 // ─── Public Report (for public report page) ───────────────────────────────────

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   CheckCircle2,
   Copy,
@@ -155,8 +156,17 @@ export default function EmailDraftPage() {
   const [state, setState] = useState<LoadState>({ kind: 'loading' })
   const [editedBody, setEditedBody] = useState('')
   const [copied, setCopied] = useState(false)
-  const [submitStatus, setSubmitStatus] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle')
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'saving' | 'saved' | 'failed' | 'rate_limited'>('idle')
+  const [rateLimitMessage, setRateLimitMessage] = useState<string | null>(null)
+  const [toast, setToast] = useState<{ msg: string; type: 'warning' | 'info' } | null>(null)
+  const [similarReport, setSimilarReport] = useState<{ id: string; message: string } | null>(null)
   const submittedRef = useRef(false)
+  const router = useRouter()
+
+  function showToast(msg: string, type: 'warning' | 'info' = 'info') {
+    setToast({ msg, type })
+    setTimeout(() => setToast(null), 5000)
+  }
 
   // ── Load report and draft ─────────────────────────────────────────────────
 
@@ -203,6 +213,8 @@ export default function EmailDraftPage() {
           report_id_human: draft.report_id,
           recipient_email: draft.recipient_email,
           subject: draft.subject,
+          email_body: draft.body,
+          officer_token: draft.officer_token ?? null,
         }))
         setEditedBody(stripMarkdown(draft.body))
         setState({ kind: 'ready', draft, report })
@@ -280,6 +292,11 @@ export default function EmailDraftPage() {
 
       // Image
       image_url: imageUrl,
+      image_phash: draft.image_phash ?? null,
+
+      // Officer token + citizen email
+      citizen_email: draft.citizen_email ?? null,
+      officer_token: draft.officer_token ?? null,
     }
 
     console.log('[Submit payload] report_id_human:', state.draft.report_id)
@@ -299,11 +316,63 @@ export default function EmailDraftPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(submitPayload),
       })
-      const d = await r.json().catch(() => ({}))
+      const d = await r.json().catch(() => ({})) as {
+        error?: string
+        duplicate?: boolean
+        duplicate_type?: string
+        report_id?: string
+        existing_report_id?: string
+        message?: string
+      }
       console.log('[Submit result]', JSON.stringify(d))
-      setSubmitStatus(r.ok ? 'saved' : 'failed')
+
+      // DUPLICATE: identical image — pHash matched existing report
+      // Redirect to /report so the user files a different issue.
+      if (d.duplicate === true && d.duplicate_type === 'identical') {
+        const existingId = d.report_id
+        showToast(
+          `This issue has already been reported nearby (${existingId}). File a different issue.`,
+          'info',
+        )
+        setTimeout(() => {
+          router.push('/report')
+        }, 2000)
+        return
+      }
+
+      // SIMILAR: pHash distance 6-15 — show banner, let user decide
+      if (d.duplicate === true && d.duplicate_type === 'similar') {
+        setSimilarReport({
+          id: d.existing_report_id ?? '',
+          message: d.message ?? '',
+        })
+        return
+      }
+
+      if (r.status === 429) {
+        // Soft warning — report data is still usable; let the user copy/send.
+        const msg = d.error ?? 'Submit limit reached. Your email draft is still available.'
+        setRateLimitMessage(msg)
+        setSubmitStatus('rate_limited')
+        showToast(msg, 'warning')
+        return
+      }
+      if (!r.ok && r.status !== 409) {
+        console.error('[submit] Failed:', r.status, d)
+        showToast(
+          `Could not save to database (${r.status}). Copy your email — draft is safe in this session.`,
+          'warning',
+        )
+        setSubmitStatus('failed')
+        return
+      }
+      if (r.status === 409) {
+        // duplicate hash — silent, expected
+        return
+      }
+      setSubmitStatus('saved')
     } catch (e) {
-      console.error('[Submit error]', e instanceof Error ? e.message : String(e))
+      console.error('[submit] Network error:', e instanceof Error ? e.message : String(e))
       setSubmitStatus('failed')
     }
     })()
@@ -368,6 +437,21 @@ export default function EmailDraftPage() {
           padding-top: 2px;
         }
       `}</style>
+
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: 24, left: '50%',
+          transform: 'translateX(-50%)',
+          background: toast.type === 'warning' ? '#d97706' : '#0F6E56',
+          color: 'white', padding: '10px 20px',
+          borderRadius: 24, fontSize: 13,
+          fontFamily: 'DM Sans', zIndex: 9999,
+          boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+          maxWidth: '90vw', textAlign: 'center',
+        }}>
+          {toast.msg}
+        </div>
+      )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingBottom: '4rem' }}>
 
@@ -434,6 +518,71 @@ export default function EmailDraftPage() {
             {state.kind === 'ready' && (
               <div className="card-enter" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
+                {similarReport && (
+                  <div style={{
+                    background: '#0e1a15',
+                    borderLeft: '4px solid #d4a843',
+                    borderRadius: 12,
+                    padding: 16,
+                    marginBottom: 16,
+                  }}>
+                    <p style={{
+                      color: '#d4a843',
+                      fontFamily: 'DM Sans, sans-serif',
+                      fontSize: 14,
+                      marginBottom: 12,
+                    }}>
+                      ⚠️ A similar report already exists nearby
+                    </p>
+                    <p style={{
+                      color: '#8a9e96',
+                      fontFamily: 'DM Sans, sans-serif',
+                      fontSize: 13,
+                      marginBottom: 16,
+                      lineHeight: 1.5,
+                    }}>
+                      Report <strong style={{ color: '#f0ede8' }}>{similarReport.id}</strong> covers
+                      the same area. Please check the existing report before filing a new one.
+                    </p>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <a
+                        href={`/report/${similarReport.id}`}
+                        style={{
+                          flex: 1,
+                          background: '#d4a843',
+                          color: '#080f0c',
+                          borderRadius: 20,
+                          padding: '10px 14px',
+                          textAlign: 'center',
+                          fontSize: 13,
+                          fontFamily: 'DM Sans, sans-serif',
+                          fontWeight: 600,
+                          textDecoration: 'none',
+                        }}
+                      >
+                        View existing report →
+                      </a>
+                      <a
+                        href="/report"
+                        style={{
+                          flex: 1,
+                          background: 'transparent',
+                          border: '1px solid #8a9e96',
+                          color: '#8a9e96',
+                          borderRadius: 20,
+                          padding: '10px 14px',
+                          textAlign: 'center',
+                          fontSize: 13,
+                          fontFamily: 'DM Sans, sans-serif',
+                          textDecoration: 'none',
+                        }}
+                      >
+                        File a different issue
+                      </a>
+                    </div>
+                  </div>
+                )}
+
                 {/* SECTION A — Email Header Card */}
                 <section style={{ background: DARK2, borderRadius: '0.875rem', border: `1px solid rgba(15,110,86,0.18)`, overflow: 'hidden' }}>
                   {/* macOS window bar */}
@@ -488,6 +637,9 @@ export default function EmailDraftPage() {
                         )}
                         {submitStatus === 'failed' && (
                           <span style={{ fontSize: '0.75rem', color: AMBER }}>Save failed — you can still send</span>
+                        )}
+                        {submitStatus === 'rate_limited' && (
+                          <span style={{ fontSize: '0.75rem', color: AMBER }}>Save skipped (rate limit) — you can still send</span>
                         )}
                         <ReportIdBadge id={state.draft.report_id} />
                       </div>
@@ -555,6 +707,25 @@ export default function EmailDraftPage() {
         {state.kind === 'ready' && (
           <div style={{ position: 'sticky', bottom: 0, marginLeft: '-1rem', marginRight: '-1rem', marginTop: '1.5rem', background: 'rgba(8,15,12,0.96)', backdropFilter: 'blur(12px)', borderTop: `1px solid rgba(15,110,86,0.2)` }}>
             <div style={{ maxWidth: '640px', margin: '0 auto', padding: '0.875rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+
+              {submitStatus === 'rate_limited' && rateLimitMessage && (
+                <div
+                  role="status"
+                  style={{
+                    display: 'flex', alignItems: 'flex-start', gap: '0.5rem',
+                    padding: '0.625rem 0.875rem',
+                    borderRadius: '0.625rem',
+                    border: `1px solid rgba(212,168,67,0.35)`,
+                    background: 'rgba(212,168,67,0.06)',
+                    color: AMBER,
+                    fontSize: '0.8125rem',
+                    fontFamily: "'DM Sans', sans-serif",
+                  }}
+                >
+                  <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
+                  <span>{rateLimitMessage} Your letter is ready — you can still copy and send it.</span>
+                </div>
+              )}
 
               {/* Primary — Copy */}
               <button

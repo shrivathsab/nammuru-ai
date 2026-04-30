@@ -116,6 +116,7 @@ function normaliseResponse(raw: Partial<ClassifyResponse>): ClassifyResponse {
     jurisdiction_flag:         raw.jurisdiction_flag         ?? null,
     location_verified:         raw.location_verified         ?? null,
     report_hash:               raw.report_hash               ?? null,
+    image_phash:               raw.image_phash               ?? null,
   }
 }
 
@@ -336,6 +337,7 @@ export default function ReportPage() {
       cluster_count:            analysisResult.cluster?.cluster_count ?? 0,
       cluster_suggested_action: analysisResult.cluster?.suggested_action ?? null,
       report_hash:              analysisResult.report_hash ?? '',
+      image_phash:              analysisResult.image_phash ?? null,
       manual_location:          manualLocation,
       captured_at:              new Date().toISOString(),
       captured_image_url:       imageDataUrl && imageDataUrl.length < 500000

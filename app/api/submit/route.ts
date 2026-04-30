@@ -1,6 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
+import { pHashDistance, PHASH_THRESHOLDS } from '@/lib/phash'
+import {
+  submitHourlyLimiter,
+  submitDailyLimiter,
+  getClientIp,
+} from '@/lib/ratelimit'
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface SubmitRequest {
@@ -17,19 +24,25 @@ interface SubmitRequest {
   pincode: string | null
   nearest_landmark: string | null
   manual_location: boolean
-  email_draft: string
-  email_subject: string
-  email_recipient: string
+  email_draft: string | null
+  email_subject: string | null
+  email_recipient: string | null
   report_id_human?: string | null
   tweet_primary?: string | null
   tweet_reply_evidence?: string | null
   tweet_reply_escalation?: string | null
+  officer_token?: string | null
+  citizen_email?: string | null
 }
 
 interface SubmitResponse {
   success: boolean;
   report_id?: string;
   error?: string;
+  duplicate?: boolean;
+  duplicate_type?: 'identical' | 'similar';
+  existing_report_id?: string;
+  message?: string;
 }
 
 interface ReportInsert {
@@ -43,9 +56,9 @@ interface ReportInsert {
   report_hash: string
   report_id_human: string
   status: 'open'
-  email_draft: string
-  email_subject: string
-  email_recipient: string
+  email_draft: string | null
+  email_subject: string | null
+  email_recipient: string | null
   triage_level: number
   cluster_count: number
   location: string
@@ -56,6 +69,9 @@ interface ReportInsert {
   tweet_primary: string | null
   tweet_reply_evidence: string | null
   tweet_reply_escalation: string | null
+  officer_token: string | null
+  citizen_email: string | null
+  image_phash: string | null
 }
 
 // ─── Validation ───────────────────────────────────────────────────────────────
@@ -77,9 +93,9 @@ function isSubmitRequest(value: unknown): value is SubmitRequest {
     (v.pincode === null || typeof v.pincode === 'string') &&
     (v.nearest_landmark === null || typeof v.nearest_landmark === 'string') &&
     typeof v.manual_location === 'boolean' &&
-    typeof v.email_draft === 'string' &&
-    typeof v.email_subject === 'string' &&
-    typeof v.email_recipient === 'string'
+    (v.email_draft === null || typeof v.email_draft === 'string') &&
+    (v.email_subject === null || typeof v.email_subject === 'string') &&
+    (v.email_recipient === null || typeof v.email_recipient === 'string')
   )
 }
 
@@ -97,7 +113,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<SubmitRes
     }
 
     const raw = rawBody as Record<string, unknown>
-    const { lat, lng, issue_type, report_hash, ward_name, status } = raw
+    const { lat, lng, issue_type, report_hash, ward_name, status, officer_token, citizen_email, image_phash } = raw
 
     const required: Record<string, unknown> = {
       lat, lng, issue_type, report_hash, ward_name
@@ -121,8 +137,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<SubmitRes
     const lngNum = Number(lng)
 
     if (!isSubmitRequest({ ...raw, lat: latNum, lng: lngNum })) {
+      const fieldTypes = Object.fromEntries(
+        Object.entries({ ...raw, lat: latNum, lng: lngNum }).map(([k, v]) => [
+          k,
+          v === null ? 'null' : typeof v,
+        ]),
+      )
+      console.error('[submit] isSubmitRequest validation failed. Field types:', fieldTypes)
       return NextResponse.json(
-        { success: false, report_id: '', error: 'Invalid request body' },
+        { success: false, report_id: '', error: 'Invalid request body — payload failed type validation. Check server logs for field types.' },
         { status: 400 },
       )
     }
@@ -149,12 +172,108 @@ export async function POST(request: NextRequest): Promise<NextResponse<SubmitRes
       )
     }
 
+    // Per-IP rate limits (Upstash sliding window): hourly burst, then daily abuse
+    const ip = getClientIp(request)
+
+    const hourly = await submitHourlyLimiter.limit(ip)
+    if (!hourly.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "You've submitted several reports recently. " +
+            'Please wait a moment before submitting again.',
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': String(hourly.limit),
+            'X-RateLimit-Remaining': '0',
+            'Retry-After': '3600',
+          },
+        },
+      )
+    }
+
+    const daily = await submitDailyLimiter.limit(ip)
+    if (!daily.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "You've reached today's report limit (5 reports/day). " +
+            'Your reports are being reviewed. ' +
+            'Contact us if you need to report an urgent issue.',
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': String(daily.limit),
+            'X-RateLimit-Remaining': '0',
+            'Retry-After': '86400',
+          },
+        },
+      )
+    }
+
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     })
 
     const image_url =
       typeof raw.image_url === 'string' ? raw.image_url : null
+
+    if (typeof image_phash === 'string' && image_phash) {
+      const latDelta = 0.0009
+      const lngDelta = 0.001
+
+      const { data: nearby } = await supabase
+        .from('reports')
+        .select('id, report_id_human, image_phash, cluster_count')
+        .gte('lat', latNum - latDelta)
+        .lte('lat', latNum + latDelta)
+        .gte('lng', lngNum - lngDelta)
+        .lte('lng', lngNum + lngDelta)
+        .not('image_phash', 'is', null)
+        .neq('status', 'resolved')
+        .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+
+      for (const existing of (nearby ?? []) as Array<{
+        id: string
+        report_id_human: string | null
+        image_phash: string | null
+        cluster_count: number | null
+      }>) {
+        if (!existing.image_phash) continue
+        const dist = pHashDistance(image_phash, existing.image_phash)
+
+        if (dist <= PHASH_THRESHOLDS.IDENTICAL) {
+          await supabase
+            .from('reports')
+            .update({ cluster_count: (existing.cluster_count ?? 1) + 1 } as never)
+            .eq('id', existing.id)
+
+          return NextResponse.json({
+            success: true,
+            report_id: existing.report_id_human ?? '',
+            duplicate: true,
+            duplicate_type: 'identical',
+            message: 'A matching report exists nearby — cluster strengthened.',
+          })
+        }
+
+        if (dist <= PHASH_THRESHOLDS.SIMILAR) {
+          return NextResponse.json({
+            success: false,
+            report_id: '',
+            duplicate: true,
+            duplicate_type: 'similar',
+            existing_report_id: existing.report_id_human ?? '',
+            message: 'A similar report exists nearby.',
+          })
+        }
+      }
+    }
 
     const { count } = await supabase
       .from('reports')
@@ -197,6 +316,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<SubmitRes
       tweet_primary: body.tweet_primary ?? null,
       tweet_reply_evidence: body.tweet_reply_evidence ?? null,
       tweet_reply_escalation: body.tweet_reply_escalation ?? null,
+      officer_token: typeof officer_token === 'string' ? officer_token : null,
+      citizen_email: typeof citizen_email === 'string' ? citizen_email : null,
+      image_phash: typeof image_phash === 'string' ? image_phash : null,
     }
 
       const { error } = await supabase
@@ -221,9 +343,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<SubmitRes
 
     return NextResponse.json({ success: true, report_id: reportId })
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Internal server error'
+    console.error('[submit] Unexpected error:', err)
     return NextResponse.json(
-      { success: false, error: message },
+      {
+        success: false,
+        report_id: '',
+        error: err instanceof Error ? err.message : 'Internal server error',
+      },
       { status: 500 },
     )
   }

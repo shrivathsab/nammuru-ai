@@ -1,26 +1,12 @@
+import { createHmac } from 'crypto'
 import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { resolveWard } from '@/lib/wards'
 import { resolveChannels } from '@/lib/routing'
 import { reportUrl } from '@/lib/config'
+import { draftContentLimiter, getClientIp } from '@/lib/ratelimit'
 import type { DraftContentRequest, DraftContentResponse } from '@/lib/types'
-
-// ─── Rate limit ───────────────────────────────────────────────────────────────
-
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now()
-  const entry = rateLimitMap.get(ip)
-  if (!entry || now >= entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + 60_000 })
-    return false
-  }
-  if (entry.count >= 5) return true
-  entry.count += 1
-  return false
-}
 
 // ─── Legal reference ──────────────────────────────────────────────────────────
 
@@ -150,9 +136,13 @@ function buildFallbackTweets(reportId: string, req: DraftContentRequest): {
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    const ip = request.headers.get('x-forwarded-for') ?? 'unknown'
-    if (isRateLimited(ip)) {
-      return NextResponse.json({ error: 'Too many requests. Please wait a moment.' }, { status: 429 })
+    const ip = getClientIp(request)
+    const { success } = await draftContentLimiter.limit(ip)
+    if (!success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please wait a moment before generating another draft.' },
+        { status: 429, headers: { 'Retry-After': '60' } },
+      )
     }
 
     const body: unknown = await request.json()
@@ -203,6 +193,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       new Date().toISOString().slice(0, 10).replace(/-/g, '') +
       '-' +
       report_hash.slice(0, 4).toUpperCase()
+
+    const HMAC_SECRET =
+      process.env.HMAC_SECRET ??
+      process.env.OFFICER_SECRET ??
+      'dev-secret-replace-in-production'
+
+    const officerToken = createHmac('sha256', HMAC_SECRET)
+      .update(reportId)
+      .digest('hex')
+      .slice(0, 16)
 
     // STEP 3: Resolve ward officer
     const ward = resolveWard(locality)
@@ -312,7 +312,11 @@ EMAIL must include:
    platform and is publicly documented at
    ${reportUrl(reportId)}. We reserve the right to escalate
    via RTI if no action is taken within the stated timeframe."
-6. Sign-off:
+6. STATUS UPDATE (plain text, no markdown):
+   To acknowledge or update this report, visit:
+   ${process.env.BASE_URL ?? 'https://nammuru.ai'}/resolve/${reportId}?token=${officerToken}
+   No login required.
+7. Sign-off:
    "Concerned Citizen of Bengaluru
    Filed via NammuruAI Civic Platform
    Report ID: ${reportId}
@@ -417,6 +421,7 @@ Return this exact JSON structure:
         reply_evidence: tweetReplyEvidence,
         reply_escalation: tweetReplyEscalation,
       },
+      officer_token: officerToken,
     } satisfies DraftContentResponse)
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

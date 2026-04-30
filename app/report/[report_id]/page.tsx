@@ -55,6 +55,10 @@ interface ReportRow {
   ward_zone?: string | null
   road?: string | null
   image_url?: string | null
+  resolved_at?: string | null
+  resolution_image_url?: string | null
+  resolution_note?: string | null
+  resolution_confidence?: number | null
 }
 
 interface PageParams {
@@ -131,6 +135,17 @@ function formatFiledDate(iso: string): { absolute: string; relative: string } {
   else relative = absolute
 
   return { absolute, relative }
+}
+
+function timeAgo(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime()
+  const diffMin = Math.floor(diffMs / 60000)
+  const diffHr = Math.floor(diffMin / 60)
+  const diffDay = Math.floor(diffHr / 24)
+  if (diffMin < 1) return 'just now'
+  if (diffMin < 60) return `${diffMin}m ago`
+  if (diffHr < 24) return `${diffHr}h ago`
+  return `${diffDay}d ago`
 }
 
 function SeverityPill({ severity }: { severity: string }) {
@@ -301,6 +316,10 @@ export default async function PublicReportPage({ params }: PageParams) {
 
   const isResolved = report.status === 'resolved'
 
+  const SLA_HOURS: Record<1 | 2 | 3, number> = { 1: 48, 2: 168, 3: 720 }
+  const hoursOpen = (Date.now() - new Date(report.created_at).getTime()) / 3600000
+  const sla = SLA_HOURS[triageLevel] ?? 720
+
   return (
     <main style={{ background: DARK, color: TEXT_PRIMARY, minHeight: '100vh', fontFamily: tokens.fonts.sans }}>
       <TopBar />
@@ -355,6 +374,40 @@ export default async function PublicReportPage({ params }: PageParams) {
             Filed {absolute} · {relative}
           </div>
         </section>
+
+        {/* Verify Resolution CTA — shown when report is open and SLA is partially elapsed */}
+        {(report.status === 'open' || report.status === 'escalated') &&
+         hoursOpen > sla * 0.5 && (
+          <div style={{
+            background: '#0e1a15',
+            border: '1px solid rgba(15,110,86,0.4)',
+            borderRadius: 12,
+            padding: 16,
+            marginTop: 16,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 12,
+          }}>
+            <div>
+              <p style={{ color: '#f0ede8', fontFamily: 'DM Sans', fontSize: 14, fontWeight: 500, marginBottom: 2 }}>
+                Has this been fixed?
+              </p>
+              <p style={{ color: '#8a9e96', fontFamily: 'DM Sans', fontSize: 12 }}>
+                Stand near the location, take a photo — Claude will verify.
+              </p>
+            </div>
+            <a href={`/verify/${displayReportId}`} style={{
+              background: '#0F6E56', color: 'white',
+              padding: '10px 20px', borderRadius: 40,
+              fontFamily: 'DM Sans', fontSize: 13, fontWeight: 600,
+              textDecoration: 'none', whiteSpace: 'nowrap',
+            }}>
+              Verify Fix →
+            </a>
+          </div>
+        )}
 
         {report.image_url && (
           <div className="mt-4 rounded-xl overflow-hidden"
@@ -577,6 +630,45 @@ export default async function PublicReportPage({ params }: PageParams) {
             This report is publicly documented and permanently indexed.
           </p>
         </section>
+
+        {report.resolution_image_url && report.image_url && (
+          <div style={{
+            background: '#0e1a15',
+            borderLeft: '4px solid #0F6E56',
+            borderRadius: 12,
+            padding: 16,
+            marginTop: 16,
+          }}>
+            <div style={{
+              fontFamily: 'JetBrains Mono', color: '#8a9e96',
+              fontSize: 10, textTransform: 'uppercase',
+              letterSpacing: '0.1em', marginBottom: 12,
+            }}>
+              BEFORE / AFTER
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <div>
+                <p style={{ color: '#8a9e96', fontSize: 11, marginBottom: 4, fontFamily: 'DM Sans' }}>
+                  Filed {timeAgo(report.created_at)}
+                </p>
+                <img src={report.image_url} alt="Before"
+                  style={{ width: '100%', borderRadius: 8, objectFit: 'cover', height: 140 }} />
+              </div>
+              <div>
+                <p style={{ color: '#0F6E56', fontSize: 11, marginBottom: 4, fontFamily: 'DM Sans' }}>
+                  ✓ Resolved {report.resolved_at ? timeAgo(report.resolved_at) : ''}
+                </p>
+                <img src={report.resolution_image_url} alt="After"
+                  style={{ width: '100%', borderRadius: 8, objectFit: 'cover', height: 140 }} />
+              </div>
+            </div>
+            {report.resolution_note && (
+              <p style={{ color: '#8a9e96', fontSize: 11, marginTop: 8, fontFamily: 'DM Sans', fontStyle: 'italic' }}>
+                {report.resolution_note}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       <Footer />

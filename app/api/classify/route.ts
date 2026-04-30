@@ -5,28 +5,11 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { isInsideBengaluru } from '@/lib/geofence';
 import { checkJurisdiction, detectPrivateProperty } from '@/lib/jurisdictionCheck';
+import { computePHash } from '@/lib/phash';
+import { classifyLimiter, getClientIp } from '@/lib/ratelimit';
 import { assignTriage } from '@/lib/triage';
 import type { ClassifyResponse, ClusterInfo, LocationDetails } from '@/lib/types';
 import { resolveWard } from '@/lib/wards';
-
-// ─── Rate limit ───────────────────────────────────────────────────────────────
-
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(ip);
-
-  if (!entry || now >= entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + 60_000 });
-    return false;
-  }
-
-  if (entry.count >= 5) return true;
-
-  entry.count += 1;
-  return false;
-}
 
 // ─── Reverse geocoding ────────────────────────────────────────────────────────
 
@@ -192,12 +175,26 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       nearest_landmark: privatePropertyCheck.nearest_landmark,
     };
 
-    // CHECK 3: Rate limit
-    const ip = request.headers.get('x-forwarded-for') ?? 'unknown';
-    if (isRateLimited(ip)) {
+    // CHECK 3: Rate limit (Upstash sliding window)
+    const ip = getClientIp(request);
+    const { success, limit, remaining, reset } = await classifyLimiter.limit(ip);
+
+    if (!success) {
       return NextResponse.json(
-        { is_valid: false, user_message: 'Too many submissions. Please wait a moment.' },
-        { status: 429 },
+        {
+          is_valid: false,
+          rejection_reason: 'rate_limited',
+          user_message: 'Too many requests. Please wait a minute before trying again.',
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': String(limit),
+            'X-RateLimit-Remaining': String(remaining),
+            'X-RateLimit-Reset': String(reset),
+            'Retry-After': '60',
+          },
+        },
       );
     }
 
@@ -325,6 +322,8 @@ Validate and classify this image reported from ${locationDetails.locality}, Beng
       ],
     });
 
+    const image_phash = await computePHash(image_base64).catch(() => null);
+
     let claudeResult: ClaudeResult;
     try {
       const rawText = response.content[0].type === 'text' ? response.content[0].text : '';
@@ -361,6 +360,7 @@ Validate and classify this image reported from ${locationDetails.locality}, Beng
         jurisdiction_flag: jurisdictionFlag,
         location_verified: manual_location ? false : true,
         report_hash: null,
+        image_phash,
       } satisfies ClassifyResponse);
     }
 
@@ -387,6 +387,7 @@ Validate and classify this image reported from ${locationDetails.locality}, Beng
         jurisdiction_flag: jurisdictionFlag,
         location_verified: manual_location ? false : true,
         report_hash: null,
+        image_phash,
       } satisfies ClassifyResponse);
     }
 
@@ -478,6 +479,7 @@ Validate and classify this image reported from ${locationDetails.locality}, Beng
       jurisdiction_flag: jurisdictionFlag,
       location_verified: manual_location ? false : true,
       report_hash,
+      image_phash,
     } satisfies ClassifyResponse);
   } catch (err) {
     console.error('classify route error:', err);
