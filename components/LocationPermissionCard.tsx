@@ -1,18 +1,152 @@
 'use client'
 
-function getDeviceInfo() {
-  if (typeof window === 'undefined') return { isIOS: false, isAndroid: false, isMobile: false, browser: 'chrome' as const }
+interface DeviceInfo {
+  isIOS: boolean
+  isAndroid: boolean
+  isMobile: boolean
+  browser:
+    | 'safari'
+    | 'chrome-ios'
+    | 'firefox-ios'
+    | 'edge-ios'
+    | 'opera-ios'
+    | 'chrome'
+    | 'samsung'
+    | 'miui'
+    | 'opera'
+    | 'uc'
+    | 'firefox'
+    | 'edge'
+    | 'edge-android'
+    | 'safari-desktop'
+    | 'brave'
+    | 'duckduckgo'
+}
+
+function getDeviceInfo(): DeviceInfo {
+  if (typeof window === 'undefined') {
+    return { isIOS: false, isAndroid: false, isMobile: false, browser: 'chrome' }
+  }
   const ua = navigator.userAgent
   const isIOS = /iPad|iPhone|iPod/.test(ua) && !(window as unknown as { MSStream?: unknown }).MSStream
   const isAndroid = /Android/.test(ua)
-  const isSafari = isIOS || (/^((?!chrome|android).)*safari/i.test(ua))
-  const isFirefox = /Firefox/.test(ua)
-  return {
-    isIOS,
-    isAndroid,
-    isMobile: isIOS || isAndroid,
-    browser: (isSafari ? 'safari' : isFirefox ? 'firefox' : 'chrome') as 'safari' | 'firefox' | 'chrome',
+  const isMobile = isIOS || isAndroid
+  let browser: DeviceInfo['browser']
+
+  if (isIOS) {
+    if      (/CriOS/.test(ua))       browser = 'chrome-ios'
+    else if (/FxiOS/.test(ua))       browser = 'firefox-ios'
+    else if (/EdgiOS/.test(ua))      browser = 'edge-ios'
+    else if (/OPiOS/.test(ua))       browser = 'opera-ios'
+    else if (/DuckDuckGo/.test(ua))  browser = 'duckduckgo'
+    else                             browser = 'safari'
+
+  } else if (isAndroid) {
+    if      (/SamsungBrowser/.test(ua)) browser = 'samsung'
+    else if (/MiuiBrowser/.test(ua))    browser = 'miui'
+    else if (/UCBrowser/.test(ua))      browser = 'uc'
+    else if (/OPR\//.test(ua))          browser = 'opera'
+    else if (/EdgA/.test(ua))           browser = 'edge-android'
+    else if (/Firefox\//.test(ua))      browser = 'firefox'
+    else if (/Brave/.test(ua))          browser = 'brave'
+    else if (/DuckDuckGo/.test(ua))     browser = 'duckduckgo'
+    else                                browser = 'chrome'
+
+  } else {
+    if      (/Edg\//.test(ua) && !/EdgA|EdgiOS/.test(ua)) browser = 'edge'
+    else if (/Firefox\//.test(ua))                         browser = 'firefox'
+    else if (/Safari/.test(ua) && !/Chrome/.test(ua))     browser = 'safari-desktop'
+    else if (/Brave/.test(ua))                             browser = 'brave'
+    else                                                   browser = 'chrome'
   }
+
+  return { isIOS, isAndroid, isMobile, browser }
+}
+
+const getPermissionSteps: Record<DeviceInfo['browser'], string[]> = {
+  'safari': [
+    'Tap the "AA" icon in the address bar',
+    'Tap "Website Settings"',
+    'Set Location → "Allow"',
+    'Come back and tap "Try again"',
+  ],
+  'chrome-ios': [
+    'Tap the ⋮ menu in the top-right corner',
+    'Tap Settings → Content Settings → Location',
+    'Allow nammooru.in, then tap "Try again"',
+    'If blocked: go to iPhone Settings → Chrome → Location → Allow',
+  ],
+  'firefox-ios': [
+    'Go to iPhone Settings → Firefox',
+    'Tap Location → While Using the App',
+    'Return here and tap "Try again"',
+  ],
+  'edge-ios': [
+    'Go to iPhone Settings → Edge',
+    'Tap Location → While Using the App',
+    'Return here and tap "Try again"',
+  ],
+  'opera-ios': [
+    'Go to iPhone Settings → Opera Mini',
+    'Tap Location → While Using the App',
+    'Return here and tap "Try again"',
+  ],
+  'chrome': [
+    'Tap the 🔒 lock icon in the address bar',
+    'Tap "Permissions"',
+    'Set Location → "Allow"',
+    'Come back and tap "Try again"',
+  ],
+  'samsung': [
+    'Tap the ≡ menu at the bottom-right',
+    'Tap Settings → Sites and downloads',
+    'Tap Site permissions → Location',
+    'Allow nammooru.in, then tap "Try again"',
+  ],
+  'miui': [
+    'Tap the ≡ or ⋮ menu',
+    'Tap Settings → Advanced settings → Site settings',
+    'Tap Location → Allow nammooru.in',
+    'Tap "Try again"',
+  ],
+  'opera': [
+    'Tap ⋮ menu → Site settings → Location',
+    'Allow nammooru.in, then tap "Try again"',
+  ],
+  'uc': [
+    'Tap ⋮ menu → Settings → Site settings → Location',
+    'Allow nammooru.in, then tap "Try again"',
+  ],
+  'firefox': [
+    'Click the 🔒 lock icon in the address bar',
+    'Click "Site settings"',
+    'Set Location → "Allow"',
+    'Refresh this page',
+  ],
+  'edge': [
+    'Click 🔒 in the address bar',
+    'Click Permissions for this site → Location → Allow',
+    'Reload the page',
+  ],
+  'edge-android': [
+    'Tap the ⋯ menu at the bottom',
+    'Tap Settings → Site permissions → Location',
+    'Allow nammooru.in, then tap "Try again"',
+  ],
+  'safari-desktop': [
+    'Click Safari menu → Settings → Websites',
+    'Click Location → set nammooru.in to Allow',
+    'Reload the page',
+  ],
+  'brave': [
+    'Tap ⋮ menu → Site settings → Location',
+    'Allow nammooru.in, then tap "Try again"',
+  ],
+  'duckduckgo': [
+    'Tap the ⋮ or fire menu',
+    'Tap Settings → Site Permissions → Location',
+    'Allow nammooru.in, then tap "Try again"',
+  ],
 }
 
 export type LocationCardState = 'idle' | 'requesting' | 'denied' | 'unavailable' | 'manual'
@@ -23,7 +157,7 @@ interface LocationPermissionCardProps {
   onManual: () => void
 }
 
-function getSteps(state: 'denied' | 'unavailable', device: ReturnType<typeof getDeviceInfo>) {
+function getSteps(state: 'denied' | 'unavailable', device: DeviceInfo) {
   if (state === 'unavailable') {
     return {
       icon: '📡',
@@ -33,42 +167,17 @@ function getSteps(state: 'denied' | 'unavailable', device: ReturnType<typeof get
     }
   }
 
-  if (device.isIOS && device.browser === 'safari') {
-    return {
-      icon: '📍',
-      title: 'Location blocked in Safari',
-      body: 'Nammooru needs your location to route the report to the right BBMP officer.',
-      steps: [
-        'Tap the "AA" icon in the address bar',
-        'Tap "Website Settings"',
-        'Set Location → "Allow"',
-        'Come back and tap "Try again"',
-      ],
-    }
-  }
-  if (device.isAndroid) {
-    return {
-      icon: '📍',
-      title: 'Location blocked',
-      body: 'Nammooru needs your location to route the report to the right BBMP officer.',
-      steps: [
-        'Tap the 🔒 lock icon in the address bar',
-        'Tap "Permissions"',
-        'Set Location → "Allow"',
-        'Come back and tap "Try again"',
-      ],
-    }
-  }
+  const title = device.isIOS && device.browser === 'safari'
+    ? 'Location blocked in Safari'
+    : device.isMobile
+      ? 'Location blocked'
+      : 'Location access blocked'
+
   return {
     icon: '📍',
-    title: 'Location access blocked',
+    title,
     body: 'Nammooru needs your location to route the report to the right BBMP officer.',
-    steps: [
-      'Click the 🔒 lock icon in the address bar',
-      'Click "Site settings"',
-      'Set Location → "Allow"',
-      'Refresh this page',
-    ],
+    steps: getPermissionSteps[device.browser],
   }
 }
 
