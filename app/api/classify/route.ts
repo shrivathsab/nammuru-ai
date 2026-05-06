@@ -5,8 +5,9 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { isInsideBengaluru } from '@/lib/geofence';
 import { checkJurisdiction, detectPrivateProperty } from '@/lib/jurisdictionCheck';
-import { computePHash } from '@/lib/phash';
+import { computePHash, pHashDistance, PHASH_THRESHOLDS } from '@/lib/phash';
 import { classifyLimiter, getClientIp } from '@/lib/ratelimit';
+import { getServerClient } from '@/lib/supabase';
 import { assignTriage } from '@/lib/triage';
 import type { ClassifyResponse, ClusterInfo, LocationDetails } from '@/lib/types';
 import { resolveWard } from '@/lib/wards';
@@ -155,7 +156,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({
         is_valid: false,
         rejection_reason: 'outside_geofence',
-        user_message: 'NammuruAI currently covers Bengaluru only.',
+        user_message: 'Nammooru currently covers Bengaluru only.',
         triage_level: null,
         cluster: null,
       } satisfies Partial<ClassifyResponse>);
@@ -361,6 +362,8 @@ Validate and classify this image reported from ${locationDetails.locality}, Beng
         location_verified: manual_location ? false : true,
         report_hash: null,
         image_phash,
+        duplicate_of: null,
+        duplicate_type: null,
       } satisfies ClassifyResponse);
     }
 
@@ -388,7 +391,50 @@ Validate and classify this image reported from ${locationDetails.locality}, Beng
         location_verified: manual_location ? false : true,
         report_hash: null,
         image_phash,
+        duplicate_of: null,
+        duplicate_type: null,
       } satisfies ClassifyResponse);
+    }
+
+    // Nearby-duplicate detection via pHash (only on valid images)
+    let duplicate_of: string | null = null;
+    let duplicate_type: 'identical' | 'similar' | null = null;
+
+    if (image_phash) {
+      const supabase = getServerClient();
+      const latDelta = 0.0009;  // ~100m
+      const lngDelta = 0.001;
+
+      const { data: nearby } = await supabase
+        .from('reports')
+        .select('id, report_id_human, image_phash, cluster_count, status')
+        .gte('lat', lat - latDelta)
+        .lte('lat', lat + latDelta)
+        .gte('lng', lng - lngDelta)
+        .lte('lng', lng + lngDelta)
+        .not('image_phash', 'is', null)
+        .neq('status', 'resolved')
+        .gte('created_at', new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString())
+        .limit(20);
+
+      for (const existing of (nearby ?? []) as Array<{
+        id: string;
+        report_id_human: string | null;
+        image_phash: string | null;
+      }>) {
+        if (!existing.image_phash) continue;
+        const dist = pHashDistance(image_phash, existing.image_phash);
+
+        if (dist <= PHASH_THRESHOLDS.IDENTICAL) {
+          duplicate_of = existing.report_id_human;
+          duplicate_type = 'identical';
+          break;
+        }
+        if (dist <= PHASH_THRESHOLDS.SIMILAR && !duplicate_of) {
+          duplicate_of = existing.report_id_human;
+          duplicate_type = 'similar';
+        }
+      }
     }
 
     // CHECK 5: Cluster detection
@@ -480,6 +526,8 @@ Validate and classify this image reported from ${locationDetails.locality}, Beng
       location_verified: manual_location ? false : true,
       report_hash,
       image_phash,
+      duplicate_of,
+      duplicate_type,
     } satisfies ClassifyResponse);
   } catch (err) {
     console.error('classify route error:', err);

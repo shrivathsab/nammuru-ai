@@ -143,7 +143,7 @@ function buildAmplifyData(raw: RawReport): AmplifyData | null {
   const clusterCount = raw.cluster_count ?? 1;
 
   const whatsappText = [
-    `*Civic Report via NammuruAI*`,
+    `*Civic Report via Nammooru*`,
     ``,
     `📍 ${raw.issue_type} at ${locality}`,
     `🚨 Triage: ${triageLabel}`,
@@ -492,7 +492,7 @@ export default function AmplifyPage({ params }: PageProps) {
         >
           <TileLink href={`/report/${data.reportId}`} label="View public report page →" />
           <TileLink href={`/map?focus=${data.reportId}`} label="See your report on the live map →" />
-          <TileLink href="/report" label="File another report →" />
+          <TileLink href="/file" label="File another report →" />
         </div>
       </section>
     </AppShell>

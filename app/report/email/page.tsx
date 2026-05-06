@@ -485,7 +485,7 @@ export default function EmailDraftPage() {
                   <p style={{ color: TEXT_MUTED, fontSize: '0.875rem' }}>Please start a new report.</p>
                 </div>
                 <Link
-                  href="/report"
+                  href="/file"
                   className="btn-teal-glow"
                   style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', borderRadius: '9999px', fontWeight: 600, color: 'white', background: TEAL, minHeight: '52px', padding: '0 2rem', textDecoration: 'none', fontFamily: "'DM Sans', sans-serif", fontSize: '1rem' }}
                 >
@@ -563,7 +563,7 @@ export default function EmailDraftPage() {
                         View existing report →
                       </a>
                       <a
-                        href="/report"
+                        href="/file"
                         style={{
                           flex: 1,
                           background: 'transparent',

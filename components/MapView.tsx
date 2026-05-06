@@ -512,7 +512,7 @@ export default function MapView() {
             </div>
           )}
           <div style={{ display: 'flex', gap: 8 }}>
-            <a href="/report" style={{
+            <a href="/file" style={{
               flex: 1, background: '#0F6E56', color: 'white',
               borderRadius: 20, padding: '7px 12px',
               textAlign: 'center', fontSize: 12,

@@ -1,5 +1,5 @@
 export const APP_URL = (
-  process.env.NEXT_PUBLIC_APP_URL ?? 'https://nammuru-ai.vercel.app'
+  process.env.NEXT_PUBLIC_APP_URL ?? 'https://nammooru.in'
 ).replace(/\/$/, ''); // remove trailing slash
 
 export function reportUrl(reportId: string): string {

@@ -135,6 +135,8 @@ export interface ClassifyResponse {
   location_verified: boolean | null;
   report_hash: string | null;
   image_phash: string | null;
+  duplicate_of: string | null;
+  duplicate_type: 'identical' | 'similar' | null;
 }
 
 // ─── Draft Content (email + tweet) ────────────────────────────────────────────
@@ -220,6 +222,7 @@ export interface PublicReport {
   nearest_landmark: string | null;
   pincode: string | null;
   image_url: string | null;
+  escalation_level?: number | null;
 }
 
 // ─── Supabase generated types (minimal — extend as schema grows) ───────────────

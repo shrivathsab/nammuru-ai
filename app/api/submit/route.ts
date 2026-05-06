@@ -1,7 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
-import { pHashDistance, PHASH_THRESHOLDS } from '@/lib/phash'
 import {
   submitHourlyLimiter,
   submitDailyLimiter,
@@ -222,58 +221,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<SubmitRes
 
     const image_url =
       typeof raw.image_url === 'string' ? raw.image_url : null
-
-    if (typeof image_phash === 'string' && image_phash) {
-      const latDelta = 0.0009
-      const lngDelta = 0.001
-
-      const { data: nearby } = await supabase
-        .from('reports')
-        .select('id, report_id_human, image_phash, cluster_count')
-        .gte('lat', latNum - latDelta)
-        .lte('lat', latNum + latDelta)
-        .gte('lng', lngNum - lngDelta)
-        .lte('lng', lngNum + lngDelta)
-        .not('image_phash', 'is', null)
-        .neq('status', 'resolved')
-        .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
-
-      for (const existing of (nearby ?? []) as Array<{
-        id: string
-        report_id_human: string | null
-        image_phash: string | null
-        cluster_count: number | null
-      }>) {
-        if (!existing.image_phash) continue
-        const dist = pHashDistance(image_phash, existing.image_phash)
-
-        if (dist <= PHASH_THRESHOLDS.IDENTICAL) {
-          await supabase
-            .from('reports')
-            .update({ cluster_count: (existing.cluster_count ?? 1) + 1 } as never)
-            .eq('id', existing.id)
-
-          return NextResponse.json({
-            success: true,
-            report_id: existing.report_id_human ?? '',
-            duplicate: true,
-            duplicate_type: 'identical',
-            message: 'A matching report exists nearby — cluster strengthened.',
-          })
-        }
-
-        if (dist <= PHASH_THRESHOLDS.SIMILAR) {
-          return NextResponse.json({
-            success: false,
-            report_id: '',
-            duplicate: true,
-            duplicate_type: 'similar',
-            existing_report_id: existing.report_id_human ?? '',
-            message: 'A similar report exists nearby.',
-          })
-        }
-      }
-    }
 
     const { count } = await supabase
       .from('reports')

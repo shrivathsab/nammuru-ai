@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
 
     // Fire-and-forget: notify citizen on resolved/escalated
     if (action === 'resolved' || action === 'escalate') {
-      const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3000';
+      const BASE_URL = process.env.BASE_URL ?? 'https://nammooru.in';
       fetch(`${BASE_URL}/api/notify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -67,7 +67,7 @@ export function AppShell({ children, currentStep, navRight }: AppShellProps) {
         }}>
           <div style={{ maxWidth: '640px', margin: '0 auto', padding: '0 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '60px' }}>
             <Link href="/" style={{ textDecoration: 'none' }}>
-              <div style={{ fontFamily: tokens.fonts.serif, color: tokens.colors.teal, fontSize: '1.15rem', fontWeight: 700 }}>NammuruAI</div>
+              <div style={{ fontFamily: tokens.fonts.serif, color: tokens.colors.teal, fontSize: '1.15rem', fontWeight: 700 }}>Nammooru</div>
               <div style={{ color: tokens.colors.textMuted, fontSize: '0.6rem', letterSpacing: '0.15em' }}>ನಮ್ಮ ಊರು</div>
             </Link>
             {navRight}

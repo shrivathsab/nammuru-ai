@@ -92,8 +92,8 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
 
   if (!report) {
     return {
-      title: `Report ${report_id} — NammuruAI`,
-      description: 'Report not found on NammuruAI.',
+      title: `Report ${report_id} — Nammooru`,
+      description: 'Report not found on Nammooru.',
     }
   }
 
@@ -101,8 +101,8 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
   const triage = report.triage_level ?? 3
 
   return {
-    title: `Report ${report_id} — NammuruAI`,
-    description: `${report.issue_type} at ${locality}, Bengaluru. Triage: Level ${triage}. Filed via NammuruAI.`,
+    title: `Report ${report_id} — Nammooru`,
+    description: `${report.issue_type} at ${locality}, Bengaluru. Triage: Level ${triage}. Filed via Nammooru.`,
     openGraph: {
       title: `[${report_id}] ${report.issue_type} at ${locality}`,
       description: `AI-verified civic report. Triage Level ${triage}. Status: ${report.status}.`,
@@ -196,14 +196,14 @@ function TopBar() {
       }}>
         <Link href="/" style={{ textDecoration: 'none' }}>
           <div style={{ fontFamily: tokens.fonts.serif, color: TEAL, fontSize: '1.25rem', fontWeight: 700 }}>
-            NammuruAI
+            Nammooru
           </div>
           <div style={{ color: TEXT_MUTED, fontSize: '0.65rem', letterSpacing: '0.15em' }}>
             ನಮ್ಮ ಊರು
           </div>
         </Link>
         <Link
-          href="/report"
+          href="/file"
           style={{
             background: TEAL,
             color: 'white',
@@ -232,13 +232,13 @@ function Footer() {
     }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto', textAlign: 'center' }}>
         <div style={{ fontFamily: tokens.fonts.serif, color: TEAL, fontSize: '1.1rem', fontWeight: 700 }}>
-          NammuruAI
+          Nammooru
         </div>
         <div style={{ color: TEXT_MUTED, fontSize: '0.72rem', marginBottom: '0.75rem' }}>
           ನಮ್ಮ ಊರು
         </div>
         <p style={{ color: TEXT_MUTED, fontSize: '0.75rem' }}>
-          © 2026 NammuruAI · Not affiliated with BBMP · Civic technology for public good
+          © 2026 Nammooru · Not affiliated with BBMP · Civic technology for public good
         </p>
       </div>
     </footer>

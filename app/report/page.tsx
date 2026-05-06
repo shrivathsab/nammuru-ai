@@ -60,7 +60,7 @@ const REJECTION_MESSAGES: Record<string, string> = {
   obscene: 'This image cannot be accepted.',
   portrait: 'Please submit a photo of a civic issue, not a person.',
   low_confidence: 'We could not clearly identify a civic issue in this photo. Please try again with a clearer image.',
-  outside_geofence: 'This location is outside the BBMP jurisdiction area covered by NammuruAI.',
+  outside_geofence: 'This location is outside the BBMP jurisdiction area covered by Nammooru.',
   parse_error: 'Something went wrong analysing your image. Please try again.',
   irrelevant_content: 'This image does not appear to show a civic issue.',
 }
@@ -117,6 +117,8 @@ function normaliseResponse(raw: Partial<ClassifyResponse>): ClassifyResponse {
     location_verified:         raw.location_verified         ?? null,
     report_hash:               raw.report_hash               ?? null,
     image_phash:               raw.image_phash               ?? null,
+    duplicate_of:              raw.duplicate_of              ?? null,
+    duplicate_type:            raw.duplicate_type            ?? null,
   }
 }
 
@@ -417,7 +419,7 @@ export default function ReportPage() {
                 <div>
                   <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: '1.625rem', fontWeight: 700, color: TEXT_PRIMARY, marginBottom: '0.625rem' }}>Allow location access</h1>
                   <p style={{ color: TEXT_MUTED, maxWidth: '380px', margin: '0 auto 0.75rem', lineHeight: 1.72, fontSize: '0.9rem' }}>
-                    NammuruAI needs your GPS location to route your report to the correct BBMP ward officer and attach verified coordinates to your complaint.
+                    Nammooru needs your GPS location to route your report to the correct BBMP ward officer and attach verified coordinates to your complaint.
                   </p>
                   <p style={{ color: TEXT_MUTED, fontSize: '0.875rem', fontWeight: 500 }}>
                     When your browser asks, {isMobile ? 'tap' : 'click'}{' '}

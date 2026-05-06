@@ -54,7 +54,7 @@ const TEXT_PRIMARY = '#f0ede8'
 const TEXT_MUTED = '#8a9e96'
 
 const EMAIL_BODY =
-  `Dear Ward Officer,\n\nI write to formally report a High Severity pothole located at HSR Layout, Bengaluru (GPS: 12.9116, 77.6370). This matter is filed under Report ID NMR-20260421-A7F3 via the NammuruAI civic platform and is publicly documented.\n\nUnder BBMP Act 1976 Section 58, your office is legally obligated to maintain roads within your ward jurisdiction...`
+  `Dear Ward Officer,\n\nI write to formally report a High Severity pothole located at HSR Layout, Bengaluru (GPS: 12.9116, 77.6370). This matter is filed under Report ID NMR-20260421-A7F3 via the Nammooru civic platform and is publicly documented.\n\nUnder BBMP Act 1976 Section 58, your office is legally obligated to maintain roads within your ward jurisdiction...`
 
 // ─── Sub-components ──────────────────────────────────────────────
 
@@ -294,7 +294,7 @@ export default function HomePage() {
         }}>
           <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px' }}>
             <div>
-              <div className="font-display" style={{ color: TEAL, fontSize: '1.25rem', fontWeight: 700 }}>NammuruAI</div>
+              <div className="font-display" style={{ color: TEAL, fontSize: '1.25rem', fontWeight: 700 }}>Nammooru</div>
               <div style={{ color: TEXT_MUTED, fontSize: '0.65rem', letterSpacing: '0.15em' }}>ನಮ್ಮ ಊರು</div>
             </div>
             {/* Desktop nav */}
@@ -316,7 +316,7 @@ export default function HomePage() {
               onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(15,110,86,0.1)'; }}>
                 📍 Live Map
               </Link>
-              <Link href="/report" className="btn-glow" style={{ background: TEAL, color: 'white', padding: '0.5rem 1.25rem', borderRadius: '9999px', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 500 }}>
+              <Link href="/file" className="btn-glow" style={{ background: TEAL, color: 'white', padding: '0.5rem 1.25rem', borderRadius: '9999px', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 500 }}>
                 Report an Issue →
               </Link>
             </div>
@@ -343,7 +343,7 @@ export default function HomePage() {
               fontFamily: 'DM Sans', fontSize: 15, fontWeight: 500,
               textDecoration: 'none',
             }}>📍 Live Map</Link>
-            <Link href="/report" onClick={() => setMobileOpen(false)} style={{ background: TEAL, color: 'white', padding: '0.75rem 2.5rem', borderRadius: '9999px', textDecoration: 'none', fontSize: '1rem', fontWeight: 600 }}>Report an Issue →</Link>
+            <Link href="/file" onClick={() => setMobileOpen(false)} style={{ background: TEAL, color: 'white', padding: '0.75rem 2.5rem', borderRadius: '9999px', textDecoration: 'none', fontSize: '1rem', fontWeight: 600 }}>Report an Issue →</Link>
           </div>
         )}
 
@@ -405,7 +405,7 @@ export default function HomePage() {
             </p>
 
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 28 }}>
-              <Link href="/report" style={{
+              <Link href="/file" style={{
                 background: '#0F6E56', color: 'white',
                 padding: '14px 28px', borderRadius: 40,
                 fontFamily: 'DM Sans', fontSize: 15, fontWeight: 600,
@@ -848,7 +848,7 @@ export default function HomePage() {
               <div style={{ color: TEAL, fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '1rem' }}>PILOT COVERAGE</div>
               <h2 className="font-display" style={{ fontSize: 'clamp(1.75rem, 4vw, 2.5rem)', fontWeight: 700, color: '#1a2e28' }}>5 BBMP wards. 198 coming.</h2>
               <p style={{ marginTop: '1rem', color: '#4a6660', maxWidth: '520px', margin: '1rem auto 0', lineHeight: 1.72 }}>
-                NammuruAI launched with 5 pilot wards covering central and south Bengaluru. Full ward coverage post-launch.
+                Nammooru launched with 5 pilot wards covering central and south Bengaluru. Full ward coverage post-launch.
               </p>
             </div>
 
@@ -931,7 +931,7 @@ export default function HomePage() {
                 Built for Bengaluru. Designed for every Indian city.
               </h2>
               <p style={{ color: TEXT_MUTED, maxWidth: '560px', margin: '0 auto 3rem', lineHeight: 1.8 }}>
-                NammuruAI is open to city contributions. The ward resolver, triage engine, and email draft system are all city-configurable. Add your city's ward data and statutory references — the AI pipeline works everywhere.
+                Nammooru is open to city contributions. The ward resolver, triage engine, and email draft system are all city-configurable. Add your city's ward data and statutory references — the AI pipeline works everywhere.
               </p>
             </div>
             <div className="two-col" style={{ textAlign: 'left' }}>
@@ -982,7 +982,7 @@ export default function HomePage() {
               display: 'flex', gap: 12, justifyContent: 'center',
               flexWrap: 'wrap',
             }}>
-              <Link href="/report" style={{
+              <Link href="/file" style={{
                 background: 'white', color: '#0F6E56',
                 padding: '16px 32px', borderRadius: 40,
                 fontFamily: 'DM Sans', fontSize: 16, fontWeight: 700,
@@ -1020,16 +1020,16 @@ export default function HomePage() {
         <footer style={{ background: DARK, borderTop: `1px solid rgba(15,110,86,0.18)`, padding: '4rem 1.5rem 2rem' }}>
           <div className="footer-grid" style={{ maxWidth: '1200px', margin: '0 auto', marginBottom: '3rem' }}>
             <div>
-              <div className="font-display" style={{ color: TEAL, fontSize: '1.1rem', fontWeight: 700 }}>NammuruAI</div>
+              <div className="font-display" style={{ color: TEAL, fontSize: '1.1rem', fontWeight: 700 }}>Nammooru</div>
               <div style={{ color: TEXT_MUTED, fontSize: '0.72rem', marginBottom: '0.5rem' }}>ನಮ್ಮ ಊರು</div>
               <p style={{ color: TEXT_MUTED, fontSize: '0.8125rem', marginTop: '0.5rem' }}>Built for Bengaluru citizens.</p>
               <p style={{ color: GOLD, fontSize: '0.75rem', fontStyle: 'italic', marginTop: '0.25rem' }}>Day 3 of 14 — building in public</p>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <Link href="/report" className="footer-link">Report an Issue</Link>
+              <Link href="/file" className="footer-link">Report an Issue</Link>
               <a href="#how-it-works" onClick={scrollToSection('how-it-works')} className="footer-link">How It Works</a>
               <a href="#coverage" className="footer-link">Ward Coverage</a>
-              <Link href="/about" className="footer-link">About NammuruAI</Link>
+              <Link href="/about" className="footer-link">About Nammooru</Link>
             </div>
             <div>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
@@ -1040,7 +1040,7 @@ export default function HomePage() {
             </div>
           </div>
           <div style={{ borderTop: `1px solid rgba(15,110,86,0.1)`, paddingTop: '1.5rem', textAlign: 'center', fontSize: '0.72rem', color: TEXT_MUTED, maxWidth: '1200px', margin: '0 auto' }}>
-            © 2026 NammuruAI · Not affiliated with BBMP · Civic technology for public good
+            © 2026 Nammooru · Not affiliated with BBMP · Civic technology for public good
           </div>
         </footer>
       </main>

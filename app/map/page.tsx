@@ -38,7 +38,7 @@ export default function MapPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
           <Link href="/" style={{ textDecoration: 'none' }}>
             <span style={{ fontFamily: 'Playfair Display', color: '#0F6E56', fontSize: 18 }}>
-              NammuruAI
+              Nammooru
             </span>
           </Link>
           <Link href="/" style={{
@@ -48,7 +48,7 @@ export default function MapPage() {
             ← Home
           </Link>
         </div>
-        <Link href="/report" style={{
+        <Link href="/file" style={{
           background: '#0F6E56', color: 'white', padding: '8px 20px',
           borderRadius: 40, fontFamily: 'DM Sans', fontSize: 13,
           fontWeight: 600, textDecoration: 'none',

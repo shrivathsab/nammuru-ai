@@ -104,16 +104,16 @@ ${communityLine}
 Issue Description:
 ${req.description}
 ${rootCauseLine}
-Photographic evidence has been attached to this report and is publicly documented on the NammuruAI civic platform.
+Photographic evidence has been attached to this report and is publicly documented on the Nammooru civic platform.
 
 As per ${legalRef}, the BBMP is legally obligated to maintain public infrastructure in a safe and serviceable condition. This report constitutes formal notice of a breach of that obligation.
 
 I respectfully request that the necessary remedial action be taken within ${deadline} of receipt of this communication.
 
-We trust this matter will receive your immediate attention. This report has been filed on the NammuruAI civic platform and is publicly documented at ${reportUrl(reportId)}. We reserve the right to escalate via RTI if no action is taken within the stated timeframe.
+We trust this matter will receive your immediate attention. This report has been filed on the Nammooru civic platform and is publicly documented at ${reportUrl(reportId)}. We reserve the right to escalate via RTI if no action is taken within the stated timeframe.
 
 Concerned Citizen of Bengaluru
-Filed via NammuruAI Civic Platform
+Filed via Nammooru (https://nammooru.in)
 Report ID: ${reportId}
 Public record: ${reportUrl(reportId)}`
 }
@@ -123,7 +123,7 @@ function buildFallbackTweets(reportId: string, req: DraftContentRequest): {
   reply_evidence: string
   reply_escalation: string
 } {
-  const primary = `${req.issue_type} reported at ${req.locality}, ${req.ward_name}. Filed on NammuruAI (${req.triage_label}). Report ${reportId}: ${reportUrl(reportId)}`
+  const primary = `${req.issue_type} reported at ${req.locality}, ${req.ward_name}. Filed on Nammooru (${req.triage_label}). Report ${reportId}: ${reportUrl(reportId)}`
   const evidence =
     req.cluster_count > 1
       ? `${req.cluster_count} citizens have reported this location in the last 7 days. GPS: ${req.lat}, ${req.lng}.`
@@ -308,17 +308,17 @@ EMAIL must include:
 3. Legal obligation: cite the legal reference above
 4. Demand: specific action within the deadline stated above
 5. Closing: "We trust this matter will receive your immediate
-   attention. This report has been filed on the NammuruAI civic
+   attention. This report has been filed on the Nammooru civic
    platform and is publicly documented at
    ${reportUrl(reportId)}. We reserve the right to escalate
    via RTI if no action is taken within the stated timeframe."
 6. STATUS UPDATE (plain text, no markdown):
    To acknowledge or update this report, visit:
-   ${process.env.BASE_URL ?? 'https://nammuru.ai'}/resolve/${reportId}?token=${officerToken}
+   ${process.env.BASE_URL ?? 'https://nammooru.in'}/resolve/${reportId}?token=${officerToken}
    No login required.
 7. Sign-off:
    "Concerned Citizen of Bengaluru
-   Filed via NammuruAI Civic Platform
+   Filed via Nammooru (https://nammooru.in)
    Report ID: ${reportId}
    Public record: ${reportUrl(reportId)}"
 

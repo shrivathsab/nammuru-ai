@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
   }
 
   const supabase = getServerClient();
-  const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3000';
+  const BASE_URL = process.env.BASE_URL ?? 'https://nammooru.in';
   const now      = new Date();
 
   // Fetch all open/acknowledged reports

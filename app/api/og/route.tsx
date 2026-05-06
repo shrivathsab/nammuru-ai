@@ -69,7 +69,7 @@ function BrandCard(): React.ReactElement {
         }}
       >
         <div style={{ display: 'flex', color: TEAL, fontSize: '72px', fontWeight: 700, fontFamily: 'serif' }}>
-          NammuruAI
+          Nammooru
         </div>
         <div style={{ display: 'flex', color: MUTED, fontSize: '28px', marginTop: '16px' }}>
           ನಮ್ಮ ಊರು · Civic accountability for Bengaluru
@@ -123,7 +123,7 @@ function ReportCard(report: OgReport): React.ReactElement {
         {/* Top row */}
         <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
           <div style={{ display: 'flex', color: TEAL, fontSize: '28px', fontWeight: 700, fontFamily: 'serif' }}>
-            NammuruAI
+            Nammooru
           </div>
           <div style={{ display: 'flex', color: MUTED, fontSize: '16px', marginLeft: 'auto' }}>
             ನಮ್ಮ ಊರು

@@ -194,7 +194,7 @@ export default function AmplifyGrid({
       return `Pothole at ${locality}. Location: ${googleMapsUrl}. Report: ${reportUrl}`;
     }
     return [
-      `*Civic Complaint via NammuruAI*`,
+      `*Civic Complaint via Nammooru*`,
       ``,
       `Report ID: ${reportId}`,
       `Issue: ${issueType}`,
@@ -205,7 +205,7 @@ export default function AmplifyGrid({
       `🔗 ${reportUrl}`,
       ``,
       `Formal letter has been sent to the ward officer.`,
-      `Public record on NammuruAI.`,
+      `Public record on Nammooru.`,
     ].join('\n');
   };
 

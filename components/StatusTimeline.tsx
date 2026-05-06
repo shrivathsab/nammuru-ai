@@ -98,7 +98,7 @@ export default function StatusTimeline({
         ) : (
           <span>
             💡 Add your email to get status updates{' '}
-            <a href="/report" className="st-link">
+            <a href="/file" className="st-link">
               re-file with email
             </a>
           </span>

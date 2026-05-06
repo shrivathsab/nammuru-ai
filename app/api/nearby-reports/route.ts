@@ -12,6 +12,7 @@ type NearbyReportRow = {
   created_at: string;
   issue_type: string | null;
   ward_name: string | null;
+  escalation_level: number | null;
 };
 
 export async function GET(req: NextRequest) {
@@ -38,7 +39,7 @@ export async function GET(req: NextRequest) {
     const supabase = getServerClient();
     const { data, error } = await supabase
       .from('reports')
-      .select('id, lat, lng, triage_level, status, created_at, issue_type, ward_name')
+      .select('id, lat, lng, triage_level, status, created_at, issue_type, ward_name, escalation_level')
       .in('status', ['open', 'escalated'])
       .gte('created_at', thirtyDaysAgo)
       .gte('lat', lat - latDelta)

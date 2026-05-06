@@ -6,7 +6,7 @@ import { getServerClient } from '@/lib/supabase';
 export const runtime = 'nodejs';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3000';
+const BASE_URL = process.env.BASE_URL ?? 'https://nammooru.in';
 const FROM = process.env.CITIZEN_EMAIL_FROM ?? 'onboarding@resend.dev';
 const HMAC_SECRET =
   process.env.HMAC_SECRET ??
@@ -99,8 +99,8 @@ export async function POST(req: NextRequest) {
         `Expected resolution: within ${deadline}`,
         `View your report: ${reportUrl}`,
         ``,
-        `— NammuruAI Civic Platform`,
-        `nammuru.ai`,
+        `— Nammooru Civic Platform`,
+        `nammooru.in`,
       ].join('\n');
     } else if (action === 'resolved') {
       subject = `✓ Your report ${report_id_human} has been resolved`;
@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
         `${BASE_URL}/report`,
         ``,
         `Thank you for helping make Bengaluru better.`,
-        `— NammuruAI Civic Platform`,
+        `— Nammooru Civic Platform`,
       ]
         .filter(Boolean)
         .join('\n');
@@ -135,7 +135,7 @@ export async function POST(req: NextRequest) {
         `${reportUrl}`,
         `(RTI draft will be available on your report page)`,
         ``,
-        `— NammuruAI Civic Platform`,
+        `— Nammooru Civic Platform`,
       ].join('\n');
     } else {
       subject = `Status update on your report ${report_id_human}`;
@@ -157,7 +157,7 @@ export async function POST(req: NextRequest) {
         `↗ Escalate via RTI:`,
         `${BASE_URL}/resolve/${report_id_human}?action=escalate&token=${citizenToken}`,
         ``,
-        `— NammuruAI Civic Platform`,
+        `— Nammooru Civic Platform`,
       ].join('\n');
     }
 
