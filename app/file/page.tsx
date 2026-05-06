@@ -27,6 +27,12 @@ import type {
 } from '@/lib/types'
 import MiniMap from '@/components/MiniMap'
 import ClusterBanner from '@/components/ClusterBanner'
+import LocationPermissionCard, {
+  ManualLocationCard,
+  type LocationCardState,
+} from '@/components/LocationPermissionCard'
+
+type LocationState = LocationCardState | 'loading' | 'granted'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -142,7 +148,7 @@ export default function FilePage() {
   const [letterExpanded, setLetterExpanded] = useState(false)
   const [nearbyReports, setNearbyReports] = useState<NearbyReportLite[]>([])
   const [coords, setCoords] = useState<Coords | null>(null)
-  const [locationError, setLocationError] = useState<string | null>(null)
+  const [locationState, setLocationState] = useState<LocationState>('idle')
   const [toast, setToast] = useState<string | null>(null)
 
   // Track filing duration for receipt page
@@ -153,12 +159,38 @@ export default function FilePage() {
   // Acquire location quietly on mount
   useEffect(() => {
     if (!navigator.geolocation) {
-      setLocationError('Location not supported on this device.')
+      setLocationState('unavailable')
       return
     }
+    setLocationState('requesting')
     navigator.geolocation.getCurrentPosition(
-      pos => setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => setLocationError('Allow location to file a report.'),
+      pos => {
+        setLocationState('granted')
+        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+      },
+      err => {
+        if (err.code === 1) setLocationState('denied')
+        else setLocationState('unavailable')
+      },
+      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 60_000 },
+    )
+  }, [])
+
+  const retryLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setLocationState('unavailable')
+      return
+    }
+    setLocationState('requesting')
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        setLocationState('granted')
+        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+      },
+      err => {
+        if (err.code === 1) setLocationState('denied')
+        else setLocationState('unavailable')
+      },
       { enableHighAccuracy: true, timeout: 10_000 },
     )
   }, [])
@@ -392,14 +424,21 @@ export default function FilePage() {
       </header>
 
       <div style={{ maxWidth: 540, margin: '0 auto', padding: '12px 16px' }}>
-        {locationError && phase === 'idle' && (
-          <div style={{
-            background: 'rgba(229,62,62,0.08)', border: '1px solid rgba(229,62,62,0.3)',
-            color: RED, padding: '10px 12px', borderRadius: 10, fontSize: '0.85rem',
-            marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8,
-          }}>
-            <AlertTriangle size={16} /> {locationError}
-          </div>
+        {phase === 'idle' && locationState !== 'granted' && locationState !== 'manual' && (
+          <LocationPermissionCard
+            state={locationState === 'loading' ? 'requesting' : locationState}
+            onRetry={retryLocation}
+            onManual={() => setLocationState('manual')}
+          />
+        )}
+
+        {phase === 'idle' && locationState === 'manual' && !coords && (
+          <ManualLocationCard
+            onWardSelect={(_ward, lat, lng) => {
+              setCoords({ lat, lng })
+              setLocationState('granted')
+            }}
+          />
         )}
 
         <PhotoCard
