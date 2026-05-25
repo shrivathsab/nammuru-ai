@@ -31,6 +31,8 @@ import LocationPermissionCard, {
   ManualLocationCard,
   type LocationCardState,
 } from '@/components/LocationPermissionCard'
+import AgentModeToggle from '@/components/AgentModeToggle'
+import CitizenEmailInput from '@/components/CitizenEmailInput'
 
 type LocationState = LocationCardState | 'loading' | 'granted'
 
@@ -913,70 +915,6 @@ function LetterCard({ draft, expanded, onToggle }: { draft: DraftContentResponse
           </button>
         </>
       )}
-    </div>
-  )
-}
-
-// ─── Agent mode toggle ────────────────────────────────────────────────────────
-
-function AgentModeToggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <div
-      onClick={() => onChange(!value)}
-      style={{
-        marginTop: 12, padding: 14, borderRadius: 12, cursor: 'pointer',
-        background: value ? 'rgba(15,110,86,0.12)' : DARK2,
-        border: `1px solid ${value ? TEAL : 'rgba(138,158,150,0.15)'}`,
-        display: 'flex', alignItems: 'center', gap: 12,
-      }}
-    >
-      <div style={{ flex: 1 }}>
-        <div style={{ fontWeight: 600, color: TEXT_PRIMARY, fontSize: '0.95rem' }}>
-          Auto-dispatch via Nammooru
-        </div>
-        <div style={{ color: TEXT_MUTED, fontSize: '0.8rem', marginTop: 2 }}>
-          We&apos;ll send the email and tweet on your behalf and notify you of replies.
-        </div>
-      </div>
-      <div style={{
-        width: 44, height: 26, borderRadius: 9999,
-        background: value ? TEAL : 'rgba(138,158,150,0.3)',
-        position: 'relative', transition: 'background 0.18s',
-        flexShrink: 0,
-      }}>
-        <div style={{
-          position: 'absolute', top: 3, left: value ? 21 : 3,
-          width: 20, height: 20, borderRadius: '50%',
-          background: 'white', transition: 'left 0.18s',
-        }} />
-      </div>
-    </div>
-  )
-}
-
-// ─── Citizen email input ──────────────────────────────────────────────────────
-
-function CitizenEmailInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  return (
-    <div className="section" style={{
-      marginTop: 12, padding: 14, borderRadius: 12,
-      background: DARK2, border: '1px solid rgba(138,158,150,0.15)',
-    }}>
-      <label style={{
-        display: 'block', color: TEXT_MUTED, fontSize: '0.75rem',
-        textTransform: 'uppercase', letterSpacing: '0.06em',
-        marginBottom: 8, fontWeight: 600,
-      }}>
-        Your email — for status updates
-      </label>
-      <input
-        type="email"
-        inputMode="email"
-        autoComplete="email"
-        placeholder="you@example.com"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      />
     </div>
   )
 }

@@ -32,6 +32,8 @@ interface SubmitRequest {
   tweet_reply_escalation?: string | null
   officer_token?: string | null
   citizen_email?: string | null
+  auto_dispatch?: boolean | null
+  ward_zone?: string | null
 }
 
 interface SubmitResponse {
@@ -71,6 +73,8 @@ interface ReportInsert {
   officer_token: string | null
   citizen_email: string | null
   image_phash: string | null
+  auto_dispatch: boolean | null
+  ward_zone: string | null
 }
 
 // ─── Validation ───────────────────────────────────────────────────────────────
@@ -112,7 +116,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<SubmitRes
     }
 
     const raw = rawBody as Record<string, unknown>
-    const { lat, lng, issue_type, report_hash, ward_name, status, officer_token, citizen_email, image_phash } = raw
+    const { lat, lng, issue_type, report_hash, ward_name, status, officer_token, citizen_email, image_phash, auto_dispatch, ward_zone } = raw
 
     const required: Record<string, unknown> = {
       lat, lng, issue_type, report_hash, ward_name
@@ -266,6 +270,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<SubmitRes
       officer_token: typeof officer_token === 'string' ? officer_token : null,
       citizen_email: typeof citizen_email === 'string' ? citizen_email : null,
       image_phash: typeof image_phash === 'string' ? image_phash : null,
+      auto_dispatch: auto_dispatch === true,
+      ward_zone: typeof ward_zone === 'string' ? ward_zone : null,
     }
 
       const { error } = await supabase
@@ -286,6 +292,18 @@ export async function POST(request: NextRequest): Promise<NextResponse<SubmitRes
         { success: false, report_id: reportId, error: error.message },
         { status: 500 },
       )
+    }
+
+    const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3000'
+
+    if (body.auto_dispatch === true && reportId) {
+      fetch(`${BASE_URL}/api/agent-dispatch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ report_id_human: reportId }),
+      }).catch(err => {
+        console.warn('[submit] Agent dispatch non-fatal:', err)
+      })
     }
 
     return NextResponse.json({ success: true, report_id: reportId })

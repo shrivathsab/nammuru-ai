@@ -59,6 +59,7 @@ interface ReportRow {
   resolution_image_url?: string | null
   resolution_note?: string | null
   resolution_confidence?: number | null
+  rti_draft?: string | null
 }
 
 interface PageParams {
@@ -374,6 +375,70 @@ export default async function PublicReportPage({ params }: PageParams) {
             Filed {absolute} · {relative}
           </div>
         </section>
+
+        {report.rti_draft && report.status === 'escalated' && (
+          <div style={{
+            background: '#0e1a15',
+            borderLeft: '4px solid #d4a843',
+            borderRadius: 12,
+            padding: 16,
+            marginTop: 16,
+          }}>
+            <div style={{
+              color: '#d4a843',
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: 10,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              marginBottom: 8,
+            }}>
+              RTI Notice Ready
+            </div>
+            <h3 style={{
+              color: '#f0ede8', fontFamily: 'DM Sans, sans-serif',
+              fontSize: 17, fontWeight: 500, marginBottom: 8, lineHeight: 1.4,
+            }}>
+              BBMP has not responded. File an RTI to compel a reply.
+            </h3>
+            <p style={{
+              color: '#8a9e96', fontFamily: 'DM Sans, sans-serif',
+              fontSize: 12, marginBottom: 14, lineHeight: 1.5,
+            }}>
+              Add your name and address below, then file online.
+              BBMP must respond within 30 days or face penalties under the RTI Act.
+            </p>
+            <details>
+              <summary style={{
+                color: '#0F6E56', cursor: 'pointer',
+                fontFamily: 'DM Sans, sans-serif', fontSize: 13, marginBottom: 8,
+              }}>
+                View RTI draft
+              </summary>
+              <pre style={{
+                background: '#080f0c', padding: 14, borderRadius: 8,
+                marginTop: 8, fontSize: 12, color: '#f0ede8',
+                fontFamily: 'JetBrains Mono, monospace',
+                whiteSpace: 'pre-wrap', lineHeight: 1.65, overflowX: 'auto',
+              }}>
+                {report.rti_draft}
+              </pre>
+            </details>
+            <a
+              href="https://bbmpaponline.in"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-block', marginTop: 14,
+                background: '#d4a843', color: '#080f0c',
+                padding: '10px 20px', borderRadius: 24,
+                textDecoration: 'none', fontFamily: 'DM Sans, sans-serif',
+                fontSize: 13, fontWeight: 600,
+              }}
+            >
+              File RTI online (Rs.10)
+            </a>
+          </div>
+        )}
 
         {/* Verify Resolution CTA — shown when report is open and SLA is partially elapsed */}
         {(report.status === 'open' || report.status === 'escalated') &&

@@ -27,6 +27,8 @@ interface AmplifyGridProps {
   tweetText: string;
   googleMapsUrl: string;
   whatsappRallyText?: string;
+  emailSentAt: string | null;
+  emailSentAuto: boolean | null;
 }
 
 type ToastState = { message: string; visible: boolean };
@@ -170,6 +172,8 @@ export default function AmplifyGrid({
   tweetText,
   googleMapsUrl,
   whatsappRallyText,
+  emailSentAt,
+  emailSentAuto,
 }: AmplifyGridProps) {
   const [toast, setToast] = useState<ToastState>({ message: '', visible: false });
 
@@ -284,20 +288,61 @@ export default function AmplifyGrid({
 
   return (
     <div className="amplify-grid">
-      {/* Row 1 — Primary CTA, full width */}
-      <button
-        type="button"
-        className="tile-primary-full"
-        onClick={handlePrimaryEmail}
-      >
-        <div className="tile-icon">
-          <Mail size={22} color="#fff" />
+      {/* Row 1 — Primary CTA / sent-confirmation, full width */}
+      {emailSentAt ? (
+        <div style={{
+          background: '#0F6E56',
+          borderRadius: 12,
+          padding: 16,
+          gridColumn: '1 / -1',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 14,
+        }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: '50%',
+            background: 'rgba(255,255,255,0.15)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 18, flexShrink: 0,
+          }}>
+            ✓
+          </div>
+          <div>
+            <div style={{
+              color: 'white',
+              fontFamily: 'DM Sans, sans-serif',
+              fontSize: 14, fontWeight: 600, marginBottom: 3,
+            }}>
+              Letter sent to BBMP
+            </div>
+            <div style={{
+              color: 'rgba(255,255,255,0.75)',
+              fontFamily: 'DM Sans, sans-serif',
+              fontSize: 12,
+            }}>
+              {new Date(emailSentAt).toLocaleString('en-IN', {
+                day: 'numeric', month: 'short',
+                hour: '2-digit', minute: '2-digit',
+              })}
+              {emailSentAuto && ' · Auto-dispatched by Nammooru'}
+            </div>
+          </div>
         </div>
-        <div>
-          <div className="tile-title">Send Formal Letter to BBMP</div>
-          <div className="tile-sub">{primarySubtitle}</div>
-        </div>
-      </button>
+      ) : (
+        <button
+          type="button"
+          className="tile-primary-full"
+          onClick={handlePrimaryEmail}
+        >
+          <div className="tile-icon">
+            <Mail size={22} color="#fff" />
+          </div>
+          <div>
+            <div className="tile-title">Send Formal Letter to BBMP</div>
+            <div className="tile-sub">{primarySubtitle}</div>
+          </div>
+        </button>
+      )}
 
       {/* Row 2 — WhatsApp specialist + general hotline */}
       {specialist && specialistChannelId && (

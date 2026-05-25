@@ -51,6 +51,8 @@ interface RawReport {
   email_draft?: string;
   cc_emails?: string[];
   tweet_primary?: string;
+  email_sent_at?: string | null;
+  email_sent_auto?: boolean | null;
 }
 
 interface AmplifyData {
@@ -79,6 +81,8 @@ interface AmplifyData {
   tweetRallyText: string;
   nearbyReports: NearbyReport[];
   wardReportCount: number;
+  emailSentAt: string | null;
+  emailSentAuto: boolean | null;
 }
 
 interface WardStat {
@@ -190,6 +194,8 @@ function buildAmplifyData(raw: RawReport): AmplifyData | null {
     tweetRallyText,
     nearbyReports: [],
     wardReportCount: 0,
+    emailSentAt: raw.email_sent_at ?? null,
+    emailSentAuto: raw.email_sent_auto ?? null,
   };
 }
 
@@ -440,6 +446,8 @@ export default function AmplifyPage({ params }: PageProps) {
           tweetText={data.tweetText}
           googleMapsUrl={`https://maps.google.com/?q=${data.lat},${data.lng}`}
           whatsappRallyText={data.whatsappRallyText}
+          emailSentAt={data.emailSentAt}
+          emailSentAuto={data.emailSentAuto}
         />
       </section>
 

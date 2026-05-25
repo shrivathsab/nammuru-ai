@@ -62,6 +62,11 @@ export interface Report {
   resolution_confidence: number | null
   resolution_note: string | null
   resolution_attempts: number | null
+
+  ward_zone: string | null
+  auto_dispatch: boolean | null
+  email_sent_at: string | null
+  email_sent_auto: boolean | null
 }
 
 export interface TweetThread {
