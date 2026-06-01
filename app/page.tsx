@@ -1020,10 +1020,28 @@ export default function HomePage() {
         <footer style={{ background: DARK, borderTop: `1px solid rgba(15,110,86,0.18)`, padding: '4rem 1.5rem 2rem' }}>
           <div className="footer-grid" style={{ maxWidth: '1200px', margin: '0 auto', marginBottom: '3rem' }}>
             <div>
-              <div className="font-display" style={{ color: TEAL, fontSize: '1.1rem', fontWeight: 700 }}>Nammooru</div>
-              <div style={{ color: TEXT_MUTED, fontSize: '0.72rem', marginBottom: '0.5rem' }}>ನಮ್ಮ ಊರು</div>
-              <p style={{ color: TEXT_MUTED, fontSize: '0.8125rem', marginTop: '0.5rem' }}>Built for Bengaluru citizens.</p>
-              <p style={{ color: GOLD, fontSize: '0.75rem', fontStyle: 'italic', marginTop: '0.25rem' }}>Day 3 of 14 — building in public</p>
+              <div style={{ textAlign: 'center', lineHeight: 1.5 }}>
+                <div style={{
+                  fontFamily: 'DM Sans, sans-serif',
+                  fontSize: 15, fontWeight: 600, color: '#f0ede8',
+                }}>
+                  Nammooru
+                </div>
+                <div style={{
+                  fontFamily: '"Noto Sans Kannada", "DM Sans", sans-serif',
+                  fontSize: 13, color: '#0F6E56', marginTop: 2,
+                }}>
+                  ನಮ್ಮ ಊರು, ನಮ್ಮ ಜವಾಬ್ದಾರಿ
+                </div>
+                <div style={{
+                  fontFamily: 'DM Sans, sans-serif',
+                  fontSize: 11, color: '#8a9e96', marginTop: 2, fontStyle: 'italic',
+                }}>
+                  Our city, our responsibility
+                </div>
+              </div>
+              <p style={{ color: TEXT_MUTED, fontSize: '0.8125rem', marginTop: '0.75rem', textAlign: 'center' }}>Built for Bengaluru citizens.</p>
+              <p style={{ color: GOLD, fontSize: '0.75rem', fontStyle: 'italic', marginTop: '0.25rem', textAlign: 'center' }}>Day 3 of 14 — building in public</p>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <Link href="/file" className="footer-link">Report an Issue</Link>

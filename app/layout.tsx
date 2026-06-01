@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     default: 'Nammooru · Civic accountability for Bengaluru',
     template: '%s · Nammooru',
   },
-  description: 'Report once. Resolve fully. AI-powered civic accountability platform for Bengaluru.',
+  description: 'ನಮ್ಮ ಊರು, ನಮ್ಮ ಜವಾಬ್ದಾರಿ — our city, our responsibility. AI-powered civic accountability for Bengaluru: report once, escalate automatically, resolve fully.',
   openGraph: {
     title: 'Nammooru',
     description: 'AI civic accountability platform for Bengaluru. ನಮ್ಮ ಊರು · Our city.',
@@ -53,6 +53,14 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Noto+Sans+Kannada:wght@400;500;600&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
