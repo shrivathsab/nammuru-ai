@@ -239,8 +239,17 @@ function Footer() {
         <div style={{ fontFamily: tokens.fonts.serif, color: TEAL, fontSize: '1.1rem', fontWeight: 700 }}>
           Nammooru
         </div>
-        <div style={{ color: TEXT_MUTED, fontSize: '0.72rem', marginBottom: '0.75rem' }}>
-          ನಮ್ಮ ಊರು
+        <div style={{
+          fontFamily: '"Noto Sans Kannada", "DM Sans", sans-serif',
+          fontSize: 14, color: TEAL, lineHeight: 1.5, marginTop: 2,
+        }}>
+          ನಮ್ಮ ಊರು, ನಮ್ಮ ಜವಾಬ್ದಾರಿ
+        </div>
+        <div style={{
+          fontFamily: '"DM Sans", sans-serif',
+          fontSize: 11, color: TEXT_MUTED, fontStyle: 'italic', marginTop: 2, marginBottom: '0.75rem',
+        }}>
+          Our city, our responsibility
         </div>
         <p style={{ color: TEXT_MUTED, fontSize: '0.75rem' }}>
           © 2026 Nammooru · Not affiliated with BBMP · Civic technology for public good
