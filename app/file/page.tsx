@@ -145,6 +145,7 @@ export default function FilePage() {
   const [draft, setDraft] = useState<DraftContentResponse | null>(null)
   const [severity, setSeverity] = useState<SeverityChoice>('med')
   const [landmark, setLandmark] = useState('')
+  const [localContext, setLocalContext] = useState('')
   const [autoDispatch, setAutoDispatch] = useState(false)
   const [citizenEmail, setCitizenEmail] = useState('')
   const [letterExpanded, setLetterExpanded] = useState(false)
@@ -280,6 +281,7 @@ export default function FilePage() {
           cluster_count: result.cluster?.cluster_count ?? 0,
           cluster_suggested_action: result.cluster?.suggested_action ?? null,
           report_hash: result.report_hash,
+          local_context: localContext.trim() || null,
         }),
       })
         .then(r => r.json())
@@ -295,7 +297,7 @@ export default function FilePage() {
       setPhase('idle')
       setImageBase64(null)
     }
-  }, [coords])
+  }, [coords, localContext])
 
   const resetAll = useCallback(() => {
     setImageBase64(null)
@@ -335,6 +337,7 @@ export default function FilePage() {
       nearest_landmark: landmark || classify.nearest_landmark || null,
       manual_location: false,
       user_confirmed_public: true,
+      local_context: localContext.trim() || null,
       image_url: imageUrl,
       image_phash: classify.image_phash,
       citizen_email: autoDispatch ? citizenEmail : null,
@@ -365,7 +368,7 @@ export default function FilePage() {
       showToast('Submit failed — your draft is safe in this session.')
       setPhase('ready')
     }
-  }, [classify, draft, imageBase64, coords, severity, landmark, autoDispatch, citizenEmail, router])
+  }, [classify, draft, imageBase64, coords, severity, landmark, localContext, autoDispatch, citizenEmail, router])
 
   const submitEnabled = phase === 'ready' && draft !== null && (!autoDispatch || /\S+@\S+\.\S+/.test(citizenEmail))
 
@@ -494,6 +497,43 @@ export default function FilePage() {
               onLandmarkChange={setLandmark}
               nearbyReports={nearbyReports}
             />
+            <div style={{ marginTop: 12 }}>
+              <label style={{
+                display: 'block',
+                color: '#8a9e96',
+                fontFamily: 'DM Sans, sans-serif',
+                fontSize: 12, marginBottom: 6,
+              }}>
+                Anything BBMP should know? (optional)
+              </label>
+              <textarea
+                value={localContext}
+                onChange={e => setLocalContext(e.target.value)}
+                maxLength={400}
+                rows={3}
+                placeholder="e.g. This drain floods every monsoon. The contractor stopped work in March. Children walk through here to school."
+                style={{
+                  width: '100%',
+                  background: '#0e1a15',
+                  border: '1px solid #1e3028',
+                  borderRadius: 10,
+                  padding: '12px 14px',
+                  color: '#f0ede8',
+                  fontFamily: 'DM Sans, sans-serif',
+                  fontSize: 14,
+                  lineHeight: 1.5,
+                  resize: 'vertical',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+              <div style={{
+                color: '#5e6f68', fontFamily: 'DM Sans, sans-serif',
+                fontSize: 11, marginTop: 4, textAlign: 'right',
+              }}>
+                {localContext.length}/400
+              </div>
+            </div>
             <SeveritySelector value={severity} onChange={setSeverity} />
             {(classify.cluster?.cluster_count ?? 0) > 1 && (
               <ClusterBanner

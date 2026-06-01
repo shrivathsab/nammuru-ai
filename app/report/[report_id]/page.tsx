@@ -15,6 +15,8 @@ import { LocationBlock } from '@/components/ui/LocationBlock'
 import { ReportIdBadge } from '@/components/ui/ReportIdBadge'
 import { StatusPill } from '@/components/ui/StatusPill'
 import { TriageBadge } from '@/components/ui/TriageBadge'
+import ParticipationLadder from '@/components/ParticipationLadder'
+import CivicRecoursePanel from '@/components/CivicRecoursePanel'
 import { reportUrl, reportDisplayUrl } from '@/lib/config'
 import { tokens } from '@/lib/design-tokens'
 
@@ -60,6 +62,8 @@ interface ReportRow {
   resolution_note?: string | null
   resolution_confidence?: number | null
   rti_draft?: string | null
+  escalation_level?: number | null
+  email_sent_at?: string | null
 }
 
 interface PageParams {
@@ -375,6 +379,16 @@ export default async function PublicReportPage({ params }: PageParams) {
             Filed {absolute} · {relative}
           </div>
         </section>
+
+        <ParticipationLadder
+          status={report.status}
+          escalationLevel={report.escalation_level ?? 0}
+          emailSentAt={report.email_sent_at ?? null}
+          rtiDraft={report.rti_draft ?? null}
+          resolvedAt={report.resolved_at ?? null}
+        />
+
+        <CivicRecoursePanel />
 
         {report.rti_draft && report.status === 'escalated' && (
           <div style={{

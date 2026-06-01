@@ -185,6 +185,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       cluster_count,
       cluster_suggested_action,
       report_hash,
+      local_context: localContext,
     } = req
 
     // STEP 2: Report ID
@@ -295,6 +296,7 @@ Google Maps: ${googleMapsUrl}
 ${cluster_count > 1 ? `Community reports: ${cluster_count} citizens reported this location in the last 7 days.` : ''}
 ${cluster_suggested_action ? 'Root cause note: ' + cluster_suggested_action : ''}
 Issue description: ${description}
+${localContext ? `\nThe citizen added this local context — incorporate it naturally and respectfully into the letter as additional grounds for urgency:\n"${localContext}"\n` : ''}
 
 DEADLINE:
 ${deadlineFor(triage_level)}

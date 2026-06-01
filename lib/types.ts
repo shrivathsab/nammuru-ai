@@ -67,6 +67,7 @@ export interface Report {
   auto_dispatch: boolean | null
   email_sent_at: string | null
   email_sent_auto: boolean | null
+  local_context: string | null
 }
 
 export interface TweetThread {
@@ -168,6 +169,7 @@ export interface DraftContentRequest {
   cluster_count: number;
   cluster_suggested_action: string | null;
   report_hash: string;
+  local_context?: string | null;
 }
 
 export interface DraftContentResponse {

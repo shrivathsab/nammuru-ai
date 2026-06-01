@@ -34,6 +34,7 @@ interface SubmitRequest {
   citizen_email?: string | null
   auto_dispatch?: boolean | null
   ward_zone?: string | null
+  local_context?: string | null
 }
 
 interface SubmitResponse {
@@ -75,6 +76,7 @@ interface ReportInsert {
   image_phash: string | null
   auto_dispatch: boolean | null
   ward_zone: string | null
+  local_context: string | null
 }
 
 // ─── Validation ───────────────────────────────────────────────────────────────
@@ -116,7 +118,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<SubmitRes
     }
 
     const raw = rawBody as Record<string, unknown>
-    const { lat, lng, issue_type, report_hash, ward_name, status, officer_token, citizen_email, image_phash, auto_dispatch, ward_zone } = raw
+    const { lat, lng, issue_type, report_hash, ward_name, status, officer_token, citizen_email, image_phash, auto_dispatch, ward_zone, local_context } = raw
 
     const required: Record<string, unknown> = {
       lat, lng, issue_type, report_hash, ward_name
@@ -272,6 +274,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<SubmitRes
       image_phash: typeof image_phash === 'string' ? image_phash : null,
       auto_dispatch: auto_dispatch === true,
       ward_zone: typeof ward_zone === 'string' ? ward_zone : null,
+      local_context: typeof local_context === 'string' && local_context.trim() ? local_context.trim() : null,
     }
 
       const { error } = await supabase
