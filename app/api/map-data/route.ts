@@ -84,6 +84,16 @@ export async function GET() {
 
     if (resolvedError) throw resolvedError;
 
+    // Active swarms (Day 9). Defensive: ignore errors (e.g. table not yet
+    // migrated) so a swarm query failure can never blank the map.
+    const { data: activeSwarms } = await supabase
+      .from('swarms')
+      .select(
+        'id, lead_report_id, ward_name, issue_type, location_summary, ' +
+        'report_count, upvote_count, signal_score, created_at'
+      )
+      .eq('status', 'active');
+
     const rows = (reports ?? []) as unknown as MapReportRow[];
     const resolved = (resolvedReports ?? []) as unknown as { ward_name: string | null }[];
 
@@ -146,13 +156,13 @@ export async function GET() {
     });
 
     return NextResponse.json(
-      { reports: rows, wardStats },
+      { reports: rows, wardStats, swarms: activeSwarms ?? [] },
       { headers: { 'Cache-Control': 's-maxage=60, stale-while-revalidate=30' } }
     );
   } catch (err) {
     console.error('[map-data] Error:', err);
     return NextResponse.json(
-      { reports: [], wardStats: [] },
+      { reports: [], wardStats: [], swarms: [] },
       { status: 200 }
     );
   }

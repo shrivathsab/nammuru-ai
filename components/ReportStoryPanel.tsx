@@ -1,5 +1,7 @@
 'use client';
 
+import UpvoteButton from './UpvoteButton';
+
 interface ReportStoryPanelProps {
   report: {
     id: string;
@@ -97,7 +99,6 @@ export default function ReportStoryPanel({ report, onClose }: ReportStoryPanelPr
 
   // CTAs
   const fullUrl = `/report/${report.report_id_human}`;
-  const addVoiceUrl = `/report?nearby=${report.report_id_human}`;
   const rallyMsg = `Civic report from ${report.locality_name ?? report.ward_name}: ${report.issue_type}. View & amplify: ${typeof window !== 'undefined' ? window.location.origin : ''}${fullUrl}`;
   const waUrl = `https://wa.me/?text=${encodeURIComponent(rallyMsg)}`;
 
@@ -307,6 +308,14 @@ export default function ReportStoryPanel({ report, onClose }: ReportStoryPanelPr
 
         {/* CTAs */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {(report.status === 'open' || report.status === 'escalated') && (
+            <UpvoteButton
+              reportIdHuman={report.report_id_human}
+              reportLat={report.lat}
+              reportLng={report.lng}
+              currentUpvotes={0}
+            />
+          )}
           <a
             href={fullUrl}
             style={{
@@ -317,19 +326,6 @@ export default function ReportStoryPanel({ report, onClose }: ReportStoryPanelPr
             }}
           >
             View Full Report →
-          </a>
-          <a
-            href={addVoiceUrl}
-            style={{
-              background: '#162118',
-              color: '#f0ede8',
-              border: '1px solid rgba(15,110,86,0.4)',
-              borderRadius: 22, padding: '10px 14px',
-              textAlign: 'center', fontSize: 13, fontWeight: 600,
-              textDecoration: 'none',
-            }}
-          >
-            ➕ Add Your Voice
           </a>
           <a
             href={waUrl}

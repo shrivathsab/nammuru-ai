@@ -2,8 +2,7 @@ import { createHmac } from 'crypto'
 import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
 
-import { resolveWard } from '@/lib/wards'
-import { resolveChannels } from '@/lib/routing'
+import { resolveChannels, resolveCorporation, corporationName, VERIFIED_CHANNELS } from '@/lib/routing'
 import { reportUrl } from '@/lib/config'
 import { draftContentLimiter, getClientIp } from '@/lib/ratelimit'
 import type { DraftContentRequest, DraftContentResponse } from '@/lib/types'
@@ -74,11 +73,11 @@ const GENERAL_HANDLES = '@GBA_office @ICCCBengaluru'
 function buildFallbackEmailBody(
   reportId: string,
   req: DraftContentRequest,
-  recipientName: string,
   googleMapsUrl: string,
 ): string {
   const legalRef = legalReferenceFor(req.issue_type)
   const deadline = deadlineShort(req.triage_level)
+  const corpName = corporationName(req.ward_name)
   const landmarkLine = req.nearest_landmark ? `\nNearest Landmark: Near ${req.nearest_landmark}` : ''
   const pincodeDisplay = req.pincode ? `, PIN ${req.pincode}` : ''
   const communityLine =
@@ -91,13 +90,13 @@ function buildFallbackEmailBody(
 
   return `TEMPLATE DRAFT — Claude API unavailable.
 
-Dear ${recipientName},
+Dear Commissioner,
 
-I am writing to formally report a civic infrastructure issue requiring your urgent attention under your jurisdiction.
+I am writing to formally report a civic infrastructure issue requiring your urgent attention under the jurisdiction of the ${corpName}, Greater Bengaluru Authority.
 
 Report Reference: ${reportId}
 Issue Category: ${req.issue_type} (Severity: ${req.severity.toUpperCase()} — Triage Level: ${req.triage_label})
-Location: ${req.locality}, ${req.ward_name}, ${req.ward_zone} Zone, Bengaluru${pincodeDisplay}${landmarkLine}
+Location: ${req.locality}, ${req.ward_name} (${corpName}), Bengaluru${pincodeDisplay}${landmarkLine}
 GPS Coordinates: ${req.lat}, ${req.lng}
 Google Maps: ${googleMapsUrl}
 ${communityLine}
@@ -205,10 +204,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       .digest('hex')
       .slice(0, 16)
 
-    // STEP 3: Resolve ward officer
-    const ward = resolveWard(locality)
-    const recipientName = ward.officer_name
-    const recipientEmail = ward.officer_email
+    // STEP 3: Resolve GBA corporation (post-BBMP, 2 Sept 2025). The formal
+    // letter is addressed to the corporation commissioner and sent to the
+    // verified email of record (comm@bbmp.gov.in) — no invented ward-officer
+    // gmails, which cannot be verified post-dissolution.
+    const corp = resolveCorporation(ward_name)
+    const corpName = corp?.name ?? 'Greater Bengaluru Authority'
+    const recipientName = corp
+      ? `The Commissioner, ${corp.name}`
+      : 'The Commissioner, Greater Bengaluru Authority'
+    const recipientEmail = VERIFIED_CHANNELS.emailOfRecord
     const routing = resolveChannels({
       issueType: issue_type,
       wardName: ward_name,
@@ -271,7 +276,7 @@ Use plain text only. Use blank lines between paragraphs.
 Use ALL CAPS for section headers if needed.
 Cite facts and legal obligations only.
 Tone: respectful, firm, specific, deadline-driven.
-Start directly with "Dear [Officer Name],"
+Start directly with "Dear Commissioner,"
 
 OUTPUT 2 — PUBLIC TWEET:
 Write like an informed, concerned Bengaluru citizen.
@@ -285,10 +290,10 @@ Return ONLY valid JSON. No markdown. No backticks. No preamble.`
 
       const userMessage = `Generate both outputs for this civic report:
 
-Recipient: ${recipientName}, Ward Officer — ${ward_name}
+Recipient: ${recipientName} (Greater Bengaluru Authority)
 Report ID: ${reportId}
 Issue: ${issue_type} — ${severity} severity (Triage: ${triage_label})
-Location: ${locality}, ${ward_name}, ${ward_zone} Zone, Bengaluru
+Location: ${locality}, ${ward_name} (${corpName}), Bengaluru
 ${pincode ? 'Pincode: ' + pincode : ''}
 ${nearest_landmark ? 'Nearest landmark: ' + nearest_landmark : ''}
 GPS: ${lat}, ${lng}
@@ -397,7 +402,7 @@ Return this exact JSON structure:
       tweetReplyEvidence = parsed.tweet_reply_evidence
       tweetReplyEscalation = parsed.tweet_reply_escalation
     } catch {
-      emailBody = buildFallbackEmailBody(reportId, req, recipientName, googleMapsUrl)
+      emailBody = buildFallbackEmailBody(reportId, req, googleMapsUrl)
       const fb = buildFallbackTweets(reportId, req)
       tweetPrimary = fb.primary
       tweetReplyEvidence = fb.reply_evidence

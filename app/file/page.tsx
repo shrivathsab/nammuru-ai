@@ -33,6 +33,7 @@ import LocationPermissionCard, {
 } from '@/components/LocationPermissionCard'
 import AgentModeToggle from '@/components/AgentModeToggle'
 import CitizenEmailInput from '@/components/CitizenEmailInput'
+import ErrorBoundary from '@/components/ErrorBoundary'
 
 type LocationState = LocationCardState | 'loading' | 'granted'
 
@@ -486,7 +487,7 @@ export default function FilePage() {
         )}
 
         {phase === 'ready' && classify && coords && (
-          <>
+          <ErrorBoundary fallbackLabel="This section failed to load — your photo is safe">
             <AIVerifiedPill classify={classify} />
             <WhereCard
               lat={coords.lat}
@@ -563,7 +564,7 @@ export default function FilePage() {
             {autoDispatch && (
               <CitizenEmailInput value={citizenEmail} onChange={setCitizenEmail} />
             )}
-          </>
+          </ErrorBoundary>
         )}
       </div>
 

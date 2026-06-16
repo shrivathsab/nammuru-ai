@@ -1,6 +1,16 @@
 /**
  * Channel types and routing logic for NammuruAI civic reports.
- * Source: BBMP official SWM contacts (Nov 2025)
+ *
+ * GBA MIGRATION — Greater Bengaluru Authority replaced BBMP on 2 Sept 2025.
+ * BBMP (and its 5 zones: Bommanahalli/East/South/West/Mahadevapura) was
+ * LEGALLY DISSOLVED and replaced by the Greater Bengaluru Authority + 5 city
+ * corporations (East/West/North/South/Central). There are NO elected
+ * corporators — IAS administrators run everything. Verified June 12, 2026.
+ * Re-verify commissioner names before each launch wave (IAS officers rotate).
+ *
+ * Old zone gmails (sebombbmp@gmail.com etc.) CANNOT be verified as monitored
+ * post-dissolution, so they are removed. Reports route ONLY through the
+ * verified-live channels in VERIFIED_CHANNELS below.
  */
 
 export type ChannelType =
@@ -30,16 +40,80 @@ export interface RoutingChannel {
 }
 
 // ─────────────────────────────────────────────────────────────
-// CITYWIDE CHANNELS — always available
+// GBA CORPORATION MODEL (replaces dissolved BBMP 5-zone structure)
+// ─────────────────────────────────────────────────────────────
+
+export type Corporation =
+  | 'South City Corporation'
+  | 'East City Corporation'
+  | 'Central City Corporation'
+  | 'West City Corporation'
+  | 'North City Corporation';
+
+export interface CorporationInfo {
+  name: Corporation;
+  hq: string;
+  commissioner: string;   // verify before each launch wave (IAS officers rotate)
+}
+
+// Pilot-ward → corporation mapping (GBA South Corporation ward list, Sept 2025).
+// NOTE: HSR Layout + Koramangala are in the official South enumeration; one
+// secondary source places them in Central. Going with South (official). Flag
+// for GPS-level verification if a report routes oddly.
+export const PILOT_WARD_CORPORATION: Record<string, CorporationInfo> = {
+  'HSR Layout Ward':   { name: 'South City Corporation', hq: 'Jayanagar Zonal Office',    commissioner: 'Ramesh K.N., IAS' },
+  'Koramangala Ward':  { name: 'South City Corporation', hq: 'Jayanagar Zonal Office',    commissioner: 'Ramesh K.N., IAS' },
+  'Jayanagar Ward':    { name: 'South City Corporation', hq: 'Jayanagar Zonal Office',    commissioner: 'Ramesh K.N., IAS' },
+  'Indiranagar Ward':  { name: 'East City Corporation',  hq: 'Mahadevapura Zonal Office', commissioner: 'Ramesh D.S., IAS' },
+  'Whitefield Ward':   { name: 'East City Corporation',  hq: 'Mahadevapura Zonal Office', commissioner: 'Ramesh D.S., IAS' },
+};
+
+// VERIFIED-LIVE channels (confirmed active June 2026) — these carry the report.
+export const VERIFIED_CHANNELS = {
+  wasteWhatsApp: '+919448197197',     // CONFIRMED active GBA/BBMP waste line
+  gbaHelpline:   '+919480683695',     // GBA grievance helpline
+  cpgrams:       'https://pgportal.gov.in',
+  emailOfRecord: 'comm@bbmp.gov.in',  // bbmp.gov.in domain still GBA-operated
+} as const;
+
+/** Resolve the GBA corporation for a pilot ward (null if unknown). */
+export function resolveCorporation(wardName: string | null | undefined): CorporationInfo | null {
+  if (!wardName) return null;
+  return PILOT_WARD_CORPORATION[wardName] ?? null;
+}
+
+/** Corporation display name for a ward, with a safe GBA-wide fallback. */
+export function corporationName(wardName: string | null | undefined): string {
+  return resolveCorporation(wardName)?.name ?? 'Greater Bengaluru Authority';
+}
+
+/**
+ * Letter-addressing block for the formal complaint / RTI.
+ *   The Commissioner, {Corporation name}
+ *   {HQ}, Greater Bengaluru Authority
+ */
+export function corporationAddressLines(wardName: string | null | undefined): string[] {
+  const corp = resolveCorporation(wardName);
+  if (!corp) {
+    return ['The Commissioner', 'Greater Bengaluru Authority', 'Bengaluru'];
+  }
+  return [
+    `The Commissioner, ${corp.name}`,
+    `${corp.hq}, Greater Bengaluru Authority`,
+  ];
+}
+
+// ─────────────────────────────────────────────────────────────
+// CITYWIDE CHANNELS — all verified-live (June 2026)
 // ─────────────────────────────────────────────────────────────
 
 export const CITYWIDE: Record<string, RoutingChannel> = {
   GENERAL_WA: {
     id: 'wa_general',
     type: 'whatsapp_direct',
-    name: 'BBMP Complaint Line',
+    name: 'GBA Grievance Helpline',
     description: 'Citywide civic complaints',
-    contact: '+919480685700',
+    contact: VERIFIED_CHANNELS.gbaHelpline,   // +91 94806 83695 (verified)
     scope: 'citywide',
     responseTime: '4-12 hours typical',
     priority: 2,
@@ -47,9 +121,9 @@ export const CITYWIDE: Record<string, RoutingChannel> = {
   GENERAL_EMAIL: {
     id: 'email_general',
     type: 'email',
-    name: 'BBMP Commissioner',
-    description: 'Official email channel',
-    contact: 'comm@bbmp.gov.in',
+    name: 'GBA Commissioner (email of record)',
+    description: 'Official email channel — bbmp.gov.in still GBA-operated',
+    contact: VERIFIED_CHANNELS.emailOfRecord, // comm@bbmp.gov.in (verified)
     scope: 'citywide',
     responseTime: '48-hour SLA',
     priority: 3,
@@ -67,153 +141,13 @@ export const CITYWIDE: Record<string, RoutingChannel> = {
   GARBAGE_WA: {
     id: 'wa_garbage',
     type: 'whatsapp_direct',
-    name: 'BBMP Waste Hotline',
+    name: 'GBA Waste Hotline',
     description: 'Garbage & illegal dumping',
-    contact: '+919448197197',
+    contact: VERIFIED_CHANNELS.wasteWhatsApp, // +91 94481 97197 (verified)
     scope: 'specialist',
     responseTime: '4-8 hours typical',
     priority: 1,
   },
-};
-
-// ─────────────────────────────────────────────────────────────
-// SWM HEAD OFFICE — escalation channels
-// ─────────────────────────────────────────────────────────────
-
-export const SWM_HEAD: Record<string, RoutingChannel> = {
-  SPECIAL_COMMR: {
-    id: 'email_swm_special',
-    type: 'email',
-    name: 'SWM Special Commissioner',
-    description: 'BBMP head office',
-    contact: 'specialswmbbmp@gmail.com',
-    scope: 'specialist',
-    responseTime: '5-7 day escalation',
-    priority: 4,
-  },
-  JC_SWM: {
-    id: 'email_swm_jc',
-    type: 'email',
-    name: 'SWM Joint Commissioner',
-    description: 'Escalation contact',
-    contact: 'jcswmbbmp@gmail.com',
-    scope: 'specialist',
-    responseTime: '5-7 day escalation',
-    priority: 4,
-  },
-  CHIEF_ENG: {
-    id: 'email_swm_ce',
-    type: 'email',
-    name: 'SWM Chief Engineer',
-    description: 'Technical escalation',
-    contact: 'ceswm2@gmail.com',
-    scope: 'specialist',
-    responseTime: '5-7 day escalation',
-    priority: 5,
-  },
-};
-
-// ─────────────────────────────────────────────────────────────
-// ZONE SE EMAILS (5 BBMP zones)
-// ─────────────────────────────────────────────────────────────
-
-export const ZONE_SE: Record<string, RoutingChannel> = {
-  'Bommanahalli': {
-    id: 'zone_bommanahalli',
-    type: 'email',
-    name: 'Bommanahalli Zone SE',
-    description: 'Zone-level Solid Waste',
-    contact: 'sebombbmp@gmail.com',
-    scope: 'zone',
-    responseTime: '2-3 day response',
-    priority: 3,
-  },
-  'East': {
-    id: 'zone_east',
-    type: 'email',
-    name: 'East Zone SE',
-    description: 'Zone-level Solid Waste',
-    contact: 'bbmpseeast@gmail.com',
-    scope: 'zone',
-    responseTime: '2-3 day response',
-    priority: 3,
-  },
-  'Mahadevapura': {
-    id: 'zone_mahadevapura',
-    type: 'email',
-    name: 'Mahadevapura Zone SE',
-    description: 'Zone-level Solid Waste',
-    contact: 'semdpura@gmail.com',
-    scope: 'zone',
-    responseTime: '2-3 day response',
-    priority: 3,
-  },
-  'South': {
-    id: 'zone_south',
-    type: 'email',
-    name: 'South Zone SE',
-    description: 'Zone-level Solid Waste',
-    contact: 'sesouthbbmp@gmail.com',
-    scope: 'zone',
-    responseTime: '2-3 day response',
-    priority: 3,
-  },
-  'West': {
-    id: 'zone_west',
-    type: 'email',
-    name: 'West Zone SE',
-    description: 'Zone-level Solid Waste',
-    contact: 'sebbmpwest123@gmail.com',
-    scope: 'zone',
-    responseTime: '2-3 day response',
-    priority: 3,
-  },
-};
-
-// ─────────────────────────────────────────────────────────────
-// DIVISION SWM EMAILS (30+ divisions)
-// ─────────────────────────────────────────────────────────────
-
-export const DIVISION_SWM: Record<string, { email: string; mobile?: string }> = {
-  'Byatarayanapura':    { email: 'bbmpaeeswmbtp@gmail.com',         mobile: '+919480688500' },
-  'Yelahanka':          { email: 'aeeswm.yelahanka2@gmail.com',     mobile: '+919480688499' },
-  'Bengaluru South':    { email: 'aeeswm.bengalurusouth@gmail.com', mobile: '+919480688524' },
-  'Bommanahalli':       { email: 'aeeswm.bommanahalli@gmail.com',   mobile: '+919480688524' },
-  'Dasarahalli':        { email: 'bbmpsedas@gmail.com',             mobile: '+919986078152' },
-  'C.V. Raman Nagar':   { email: 'aeeswmcvr@gmail.com',             mobile: '+919945689355' },
-  'Hebbal':             { email: 'aeeswm.hebbal1@gmail.com',        mobile: '+919480688502' },
-  'Sarvajna Nagar':     { email: 'aeeswm.sarvagnanagar@gmail.com',  mobile: '+919632709988' },
-  'Shanti Nagar':       { email: 'aeeswm.shanthinagar@gmail.com',   mobile: '+918147194915' },
-  'Shivaji Nagar':      { email: 'aeeswmshivajinagar1@gmail.com',   mobile: '+918147194915' },
-  'Pulikeshi Nagar':    { email: 'aeeswm.pulakeshinagar@gmail.com', mobile: '+919886638403' },
-  'K.R. Puram':         { email: 'aeeswm.krpura36@gmail.com',       mobile: '+919480688516' },
-  'Mahadevapura':       { email: 'swm.mahadevapura@gmail.com',      mobile: '+919480688517' },
-  'Kengeri':            { email: 'aeeswm.yeshwantpur@gmail.com',    mobile: '+919480688509' },
-  'Rajarajeshwari Nagar': { email: 'aeeswm.rrnagar1@gmail.com',     mobile: '+919480688508' },
-  'Basavanagudi':       { email: 'aeeswm.basavanagudi@gmail.com',   mobile: '+919480685594' },
-  'BTM Layout':         { email: 'btmswmcell@gmail.com',            mobile: '+919845807141' },
-  'Chikpete':           { email: 'aeeswm.chickpete@gmail.com',      mobile: '+919845807141' },
-  'Jayanagar':          { email: 'aeeswm.jayanagar@gmail.com',      mobile: '+919632612299' },
-  'Padmanabhanagar':    { email: 'aeeswm.padmanabhnagar@gmail.com', mobile: '+917259367289' },
-  'Vijay Nagar':        { email: 'aeeswm.vijaynagar@gmail.com',     mobile: '+919036567996' },
-  'Chamarajpete':       { email: 'aeeswm.chamarajpete1@gmail.com',  mobile: '+919986957606' },
-  'Gandhi Nagar':       { email: 'eocottonpet@gmail.com',           mobile: '+919902841114' },
-  'Govindaraj Nagar':   { email: 'eogrnbbmpwest9@gmail.com',        mobile: '+919538202886' },
-  'Mahalakshmi Layout': { email: 'aeeswm.mahalakshmilayout1@gmail.com', mobile: '+919902841114' },
-  'Malleshwaram':       { email: 'aeeswm.malleshwaram@gmail.com',   mobile: '+919731482912' },
-  'Rajajinagar':        { email: 'aeeswm.rajajinagar1@gmail.com',   mobile: '+919449788301' },
-};
-
-// ─────────────────────────────────────────────────────────────
-// WARD → DIVISION MAPPING (pilot wards)
-// ─────────────────────────────────────────────────────────────
-
-export const WARD_TO_DIVISION: Record<string, string> = {
-  'HSR Layout Ward':    'Bommanahalli',
-  'Koramangala Ward':   'Bengaluru South',
-  'Indiranagar Ward':   'C.V. Raman Nagar',
-  'Whitefield Ward':    'Mahadevapura',
-  'Jayanagar Ward':     'Jayanagar',
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -231,7 +165,12 @@ export function categorizeIssue(issueType: string): IssueCategory {
 }
 
 // ─────────────────────────────────────────────────────────────
-// SMART ROUTING — pick best channels for this report
+// SMART ROUTING — pick best VERIFIED channels for this report
+//
+// Post-GBA: route only through verified-live channels. The corporation
+// commissioner is reached at the email of record (comm@bbmp.gov.in) — we do
+// NOT invent a per-commissioner gmail. L1 reports surface the corporation
+// commissioner explicitly so the RoutingReceipt shows who is accountable.
 // ─────────────────────────────────────────────────────────────
 
 export function resolveChannels(params: {
@@ -242,11 +181,10 @@ export function resolveChannels(params: {
 }): {
   primary: RoutingChannel[];
   escalation: RoutingChannel[];
-  division?: RoutingChannel;
+  corporation: CorporationInfo | null;
 } {
   const category = categorizeIssue(params.issueType);
-  const division = WARD_TO_DIVISION[params.wardName];
-  const divisionContact = division ? DIVISION_SWM[division] : undefined;
+  const corp = resolveCorporation(params.wardName);
 
   const primary: RoutingChannel[] = [];
   const escalation: RoutingChannel[] = [];
@@ -256,47 +194,35 @@ export function resolveChannels(params: {
     primary.push(CITYWIDE.GENERAL_EMAIL);
   } else if (category === 'garbage') {
     primary.push(CITYWIDE.GARBAGE_WA);
-    if (divisionContact) {
-      primary.push({
-        id: `division_${division}`,
-        type: 'email',
-        name: `${division} SWM`,
-        description: 'Division-level contact',
-        contact: divisionContact.email,
-        scope: 'division',
-        responseTime: '1-2 day response',
-        priority: 2,
-      });
-    }
-    const zoneSE = ZONE_SE[params.wardZone];
-    if (zoneSE) primary.push(zoneSE);
+    primary.push(CITYWIDE.GENERAL_EMAIL);
   } else {
     primary.push(CITYWIDE.GENERAL_WA);
     primary.push(CITYWIDE.GENERAL_EMAIL);
   }
 
-  if (params.triageLevel === 1) {
-    escalation.push(SWM_HEAD.SPECIAL_COMMR);
-    escalation.push(SWM_HEAD.JC_SWM);
-  }
-  if (params.triageLevel <= 2 && category === 'garbage') {
-    escalation.push(SWM_HEAD.CHIEF_ENG);
+  // Escalation — corporation commissioner, reached via the email of record.
+  // L1 always escalates; L2 escalates only for garbage (public-health weight).
+  const shouldEscalate =
+    params.triageLevel === 1 || (params.triageLevel === 2 && category === 'garbage');
+
+  if (shouldEscalate) {
+    escalation.push({
+      id: corp
+        ? `corp_${corp.name.replace(/\s+/g, '_').toLowerCase()}`
+        : 'corp_gba',
+      type: 'email',
+      name: corp ? `Commissioner, ${corp.name}` : 'GBA Commissioner',
+      description: corp
+        ? `${corp.hq}, Greater Bengaluru Authority`
+        : 'Greater Bengaluru Authority',
+      contact: VERIFIED_CHANNELS.emailOfRecord,
+      scope: 'specialist',
+      responseTime: params.triageLevel === 1 ? '48-hour SLA' : '7-day SLA',
+      priority: 1,
+    });
   }
 
-  return {
-    primary,
-    escalation,
-    division: divisionContact ? {
-      id: `division_${division}`,
-      type: 'email',
-      name: `${division} Division SWM`,
-      description: 'Ward-specific contact',
-      contact: divisionContact.email,
-      scope: 'division',
-      responseTime: '1-2 day response',
-      priority: 2,
-    } : undefined,
-  };
+  return { primary, escalation, corporation: corp };
 }
 
 // ─────────────────────────────────────────────────────────────

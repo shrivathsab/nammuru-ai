@@ -1,6 +1,7 @@
 'use client';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 const MapView = dynamic(() => import('@/components/MapView'), {
   ssr: false,
@@ -58,7 +59,9 @@ export default function MapPage() {
       </nav>
 
       <div style={{ paddingTop: 56 }}>
-        <MapView />
+        <ErrorBoundary fallbackLabel="The map failed to load">
+          <MapView />
+        </ErrorBoundary>
       </div>
 
       <style>{`

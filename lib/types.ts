@@ -232,6 +232,71 @@ export interface PublicReport {
   escalation_level?: number | null;
 }
 
+// ─── Upvote + Swarm (Day 9) ────────────────────────────────────────────────
+
+export interface UpvoteRequest {
+  report_id_human: string;
+  lat: number;
+  lng: number;
+  device_hash: string;   // SHA-256(userAgent+screen+timezone+language), client-side
+  note?: string;         // optional, max 20 chars
+}
+
+export type UpvoteErrorCode =
+  | 'already_upvoted'
+  | 'too_far'
+  | 'monthly_limit'
+  | 'not_found'
+  | 'already_resolved';
+
+export interface UpvoteResponse {
+  success: boolean;
+  error?: string;
+  error_code?: UpvoteErrorCode;
+  new_upvote_count?: number;
+  new_signal_score?: number;
+  monthly_remaining?: number;
+  swarm_triggered?: boolean;
+}
+
+export interface SwarmTweet {
+  text: string;
+  type: 'primary' | 'reply';
+}
+
+export interface Swarm {
+  id: string;
+  report_ids: string[];
+  lead_report_id: string | null;
+  location_summary: string | null;
+  ward_name: string | null;
+  issue_type: string | null;
+  severity: string | null;
+  report_count: number;
+  upvote_count: number;
+  signal_score: number;
+  status: 'active' | 'resolved' | 'dismissed';
+  formal_email: string | null;
+  tweet_thread: SwarmTweet[] | null;
+  whatsapp_message: string | null;
+  dossier_summary: string | null;
+  created_at: string;
+  resolved_at: string | null;
+}
+
+// Lightweight swarm shape returned in /api/map-data
+export interface SwarmSummary {
+  id: string;
+  lead_report_id: string | null;
+  ward_name: string | null;
+  issue_type: string | null;
+  location_summary: string | null;
+  report_count: number;
+  upvote_count: number;
+  signal_score: number;
+  created_at: string;
+}
+
 // ─── Supabase generated types (minimal — extend as schema grows) ───────────────
 
 export interface Database {

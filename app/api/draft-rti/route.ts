@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { getServerClient } from '@/lib/supabase';
 import type { Report } from '@/lib/types';
+import { corporationName } from '@/lib/routing';
 
 export const runtime = 'nodejs';
 
@@ -36,6 +37,7 @@ export async function POST(req: NextRequest) {
       (Date.now() - new Date(report.created_at).getTime()) / 86_400_000
     );
     const slaHours = SLA_HOURS[report.triage_level ?? 3] ?? 720;
+    const corpName = corporationName(report.ward_name);
 
     const prompt = `Generate a formal RTI notice under Right to Information Act 2005.
 
@@ -47,13 +49,16 @@ Triage: Level ${report.triage_level} — SLA was ${slaHours} hours
 Days without BBMP response: ${daysOpen}
 
 Address RTI to:
-The Public Information Officer, BBMP (Bruhat Bengaluru Mahanagara Palike)
-${report.ward_zone ? report.ward_zone + ' Zone' : 'Bengaluru Central Zone'}
+The Public Information Officer, ${corpName}
+Greater Bengaluru Authority (GBA), Bengaluru
+(BBMP was dissolved on 2 September 2025 and replaced by the Greater Bengaluru
+Authority and its city corporations; the bbmp.gov.in domain and public records
+remain GBA-operated.)
 
 The RTI notice MUST include ALL of the following:
 1. Legal basis: RTI Act 2005 Section 6(1)
 2. Reference to original complaint ID ${report.report_id_human} filed on ${filedDate}
-3. Reference to BBMP Act 1976 Section 58 (statutory maintenance obligation)
+3. Cite the Greater Bengaluru Governance Act 2024 as the current statutory basis for the authority's maintenance obligation, alongside BBMP Act 1976 Section 58 (which established that obligation and remains valid for the obligation history)
 4. Information requested: (a) action taken, (b) officer assigned, (c) expected resolution, (d) reason for delay
 5. Fee of Rs.10 payable via bbmpaponline.in or postal order
 6. 30-day mandatory response window with penalty clause for non-compliance
