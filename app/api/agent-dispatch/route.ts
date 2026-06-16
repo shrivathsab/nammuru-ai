@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { Resend } from 'resend';
 import { getServerClient } from '@/lib/supabase';
 import type { Report } from '@/lib/types';
+import { VERIFIED_CHANNELS } from '@/lib/routing';
 
 export const runtime = 'nodejs';
 
@@ -9,21 +10,16 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = process.env.CITIZEN_EMAIL_FROM ?? 'onboarding@resend.dev';
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3000';
 
-const ZONE_CC: Record<string, string> = {
-  Bommanahalli: 'sebombbmp@gmail.com',
-  East:         'bbmpseeast@gmail.com',
-  Mahadevapura: 'semdpura@gmail.com',
-  South:        'sesouthbbmp@gmail.com',
-  West:         'sebbmpwest123@gmail.com',
-};
-
-function buildCcList(triage_level: number | null, ward_zone: string | null): string[] {
-  const cc: string[] = [];
-  if (triage_level === 1) {
-    cc.push('comm@bbmp.gov.in');
-    if (ward_zone && ZONE_CC[ward_zone]) cc.push(ZONE_CC[ward_zone]);
+// GBA migration (2 Sept 2025): the dissolved BBMP zone gmails (sebombbmp@…
+// etc.) are gone — they cannot be verified as monitored. The GBA corporation
+// commissioner is reached via the verified email of record (comm@bbmp.gov.in),
+// which is normally the primary recipient. For L1 we keep it on the CC paper
+// trail even if a legacy report carries a different recipient.
+function buildCcList(triageLevel: number | null, toEmail: string): string[] {
+  if (triageLevel === 1 && toEmail !== VERIFIED_CHANNELS.emailOfRecord) {
+    return [VERIFIED_CHANNELS.emailOfRecord];
   }
-  return cc;
+  return [];
 }
 
 export async function POST(req: NextRequest) {
@@ -57,12 +53,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ skipped: true, reason: 'missing_draft_or_recipient' });
     }
 
-    const cc = buildCcList(report.triage_level, report.ward_zone);
+    const toEmail = report.email_recipient ?? VERIFIED_CHANNELS.emailOfRecord;
+    const cc = buildCcList(report.triage_level, toEmail);
     const replyTo = report.citizen_email ? [report.citizen_email] : undefined;
 
     const { data: sendData, error: sendError } = await resend.emails.send({
       from: FROM,
-      to: report.email_recipient,
+      to: toEmail,
       cc: cc.length > 0 ? cc : undefined,
       replyTo,
       subject: report.email_subject ?? `Civic complaint: ${report.issue_type}`,

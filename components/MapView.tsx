@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { MapContainer, TileLayer, GeoJSON, CircleMarker, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, CircleMarker, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import ReportStoryPanel from './ReportStoryPanel';
@@ -127,6 +127,18 @@ interface WardStat {
   top_issue: string;
 }
 
+interface MapSwarm {
+  id: string;
+  lead_report_id: string | null;
+  ward_name: string | null;
+  issue_type: string | null;
+  location_summary: string | null;
+  report_count: number;
+  upvote_count: number;
+  signal_score: number;
+  created_at: string;
+}
+
 function wardColor(score: number): string {
   if (score >= 90) return '#0F6E56';
   if (score >= 70) return '#1a9b78';
@@ -169,6 +181,7 @@ function normalizeWardName(name: string): string {
 export default function MapView() {
   const [reports, setReports] = useState<Report[]>([]);
   const [wardStats, setWardStats] = useState<WardStat[]>([]);
+  const [swarms, setSwarms] = useState<MapSwarm[]>([]);
   const [geoJson, setGeoJson] = useState<GeoJSON.FeatureCollection | null>(null);
   const [selectedWard, setSelectedWard] = useState<WardStat | null>(null);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
@@ -184,6 +197,7 @@ export default function MapView() {
     ]).then(([data, geo]) => {
       setReports(data.reports ?? []);
       setWardStats(data.wardStats ?? []);
+      setSwarms(data.swarms ?? []);
       setGeoJson(geo);
       setWardCount(geo?.features?.length ?? 0);
       setLoading(false);
@@ -273,6 +287,16 @@ export default function MapView() {
     if (r.status === 'open') return true;
     return false;
   });
+
+  // Swarm overlays (Day 9) — match each active swarm to its lead report's coords.
+  const reportById = new Map(reports.map(r => [r.id, r]));
+  const selectedWardSwarm = selectedWard
+    ? swarms.find(
+        s =>
+          !!s.ward_name &&
+          normalizeWardName(s.ward_name) === normalizeWardName(selectedWard.ward_name),
+      ) ?? null
+    : null;
 
   return (
     <div style={{ position: 'relative' }}>
@@ -443,6 +467,29 @@ export default function MapView() {
             />
           );
         })}
+
+        {swarms.map(s => {
+          const lead = s.lead_report_id ? reportById.get(s.lead_report_id) : undefined;
+          if (!lead) return null;
+          const icon = L.divIcon({
+            html: '<div class="swarm-ring"></div><div class="swarm-dot"></div>',
+            className: 'swarm-marker',
+            iconSize: [40, 40],
+            iconAnchor: [20, 20],
+          });
+          return (
+            <Marker
+              key={`swarm-${s.id}`}
+              position={[lead.lat, lead.lng]}
+              icon={icon}
+              eventHandlers={{
+                click: () => {
+                  window.location.href = `/swarm/${s.id}`;
+                },
+              }}
+            />
+          );
+        })}
       </MapContainer>
 
       {selectedReport && (
@@ -509,6 +556,24 @@ export default function MapView() {
           {selectedWard.top_issue && (
             <div style={{ color: '#8a9e96', fontSize: 12, marginBottom: 14, fontFamily: 'DM Sans' }}>
               Top issue: <span style={{ color: '#f0ede8' }}>{selectedWard.top_issue}</span>
+            </div>
+          )}
+          {selectedWardSwarm && (
+            <div
+              onClick={() => { window.location.href = `/swarm/${selectedWardSwarm.id}`; }}
+              style={{
+                background: 'rgba(212,168,67,0.1)',
+                border: '1px solid #d4a843',
+                borderRadius: 8, padding: '10px 12px',
+                marginBottom: 14, cursor: 'pointer',
+              }}
+            >
+              <div style={{ color: '#d4a843', fontSize: 12, fontFamily: 'DM Sans', fontWeight: 600 }}>
+                🔥 Active community swarm
+              </div>
+              <div style={{ color: '#8a9e96', fontSize: 11, marginTop: 2, fontFamily: 'DM Sans' }}>
+                {selectedWardSwarm.report_count} reports · {selectedWardSwarm.upvote_count} voices · Signal {selectedWardSwarm.signal_score}
+              </div>
             </div>
           )}
           <div style={{ display: 'flex', gap: 8 }}>

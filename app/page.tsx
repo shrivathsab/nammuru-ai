@@ -56,6 +56,12 @@ const TEXT_MUTED = '#8a9e96'
 const EMAIL_BODY =
   `Dear Ward Officer,\n\nI write to formally report a High Severity pothole located at HSR Layout, Bengaluru (GPS: 12.9116, 77.6370). This matter is filed under Report ID NMR-20260421-A7F3 via the Nammooru civic platform and is publicly documented.\n\nUnder BBMP Act 1976 Section 58, your office is legally obligated to maintain roads within your ward jurisdiction...`
 
+// Project launched 2026-04-29 — "building in public" day counter, capped at 14.
+const PROJECT_START = new Date('2026-04-29').getTime()
+function getBuildDay(): number {
+  return Math.min(14, Math.floor((Date.now() - PROJECT_START) / 86_400_000) + 1)
+}
+
 // ─── Sub-components ──────────────────────────────────────────────
 
 function ConfidenceBar() {
@@ -519,9 +525,9 @@ export default function HomePage() {
               <div className="reveal card-lift" style={{ background: DARK3, borderLeft: `4px solid ${TEAL}`, borderRadius: '0.75rem', padding: '2rem', position: 'relative', boxShadow: '0 4px 24px rgba(0,0,0,0.2)' }}>
                 <div className="font-mono-jet" style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', fontSize: '2rem', fontWeight: 500, color: GOLD, opacity: 0.5 }}>03</div>
                 <FileText size={32} style={{ color: TEAL, marginBottom: '1rem' }} />
-                <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: TEXT_PRIMARY, marginBottom: '0.625rem' }}>Legal Letter Generated</h3>
-                <p style={{ color: TEXT_MUTED, fontSize: '0.9rem', lineHeight: 1.72, marginBottom: '1.5rem' }}>A formal grievance email citing BBMP Act 1976 is drafted to your ward officer. Copy, paste, send. BBMP has a legal obligation to respond.</p>
-                <div className="font-mono-jet" style={{ fontSize: '0.68rem', color: TEXT_MUTED, opacity: 0.65 }}>BBMP Act 1976 §58</div>
+                <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: TEXT_PRIMARY, marginBottom: '0.625rem' }}>Agent Dispatches</h3>
+                <p style={{ color: TEXT_MUTED, fontSize: '0.9rem', lineHeight: 1.72, marginBottom: '1.5rem' }}>A formal letter citing BBMP Act 1976 §58 is drafted and sent automatically to your ward officer. A public record is created instantly — and Nammooru escalates until BBMP responds.</p>
+                <div className="font-mono-jet" style={{ fontSize: '0.68rem', color: TEXT_MUTED, opacity: 0.65 }}>Auto-dispatched</div>
               </div>
             </div>
           </div>
@@ -918,7 +924,7 @@ export default function HomePage() {
               <CountUpStat target={225} label="Wards Monitored" active={statsInView} />
               <CountUpStat target={3} label="Triage Levels" active={statsInView} />
               <StatStatic value="48h" label="L1 Response SLA" />
-              <CountUpStat target={1} label="Claude API Call Per Report" active={statsInView} />
+              <CountUpStat target={2} label="Claude API Calls Per Report" active={statsInView} />
             </div>
           </div>
         </section>
@@ -1041,7 +1047,7 @@ export default function HomePage() {
                 </div>
               </div>
               <p style={{ color: TEXT_MUTED, fontSize: '0.8125rem', marginTop: '0.75rem', textAlign: 'center' }}>Built for Bengaluru citizens.</p>
-              <p style={{ color: GOLD, fontSize: '0.75rem', fontStyle: 'italic', marginTop: '0.25rem', textAlign: 'center' }}>Day 3 of 14 — building in public</p>
+              <p style={{ color: GOLD, fontSize: '0.75rem', fontStyle: 'italic', marginTop: '0.25rem', textAlign: 'center' }}>Day {getBuildDay()} of 14 — building in public</p>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <Link href="/file" className="footer-link">Report an Issue</Link>

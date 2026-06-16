@@ -17,6 +17,8 @@ import { StatusPill } from '@/components/ui/StatusPill'
 import { TriageBadge } from '@/components/ui/TriageBadge'
 import ParticipationLadder from '@/components/ParticipationLadder'
 import CivicRecoursePanel from '@/components/CivicRecoursePanel'
+import UpvoteButton from '@/components/UpvoteButton'
+import ErrorBoundary from '@/components/ErrorBoundary'
 import { reportUrl, reportDisplayUrl } from '@/lib/config'
 import { tokens } from '@/lib/design-tokens'
 
@@ -64,6 +66,7 @@ interface ReportRow {
   rti_draft?: string | null
   escalation_level?: number | null
   email_sent_at?: string | null
+  upvote_count?: number | null
 }
 
 interface PageParams {
@@ -77,12 +80,6 @@ async function fetchReport(reportId: string): Promise<ReportRow | null> {
       .select('*')
       .eq('report_id_human', reportId)
       .maybeSingle()
-
-    console.log('[PublicReport] id:', reportId)
-    console.log('[PublicReport] data:', JSON.stringify(report))
-    console.log('[PublicReport] error:', JSON.stringify(error))
-    console.log('[PublicReport] url:', process.env.NEXT_PUBLIC_SUPABASE_URL)
-    console.log('[PublicReport] key exists:', !!process.env.SUPABASE_SERVICE_ROLE_KEY)
 
     if (error || !report) return null
     return report as unknown as ReportRow
@@ -389,15 +386,43 @@ export default async function PublicReportPage({ params }: PageParams) {
           </div>
         </section>
 
-        <ParticipationLadder
-          status={report.status}
-          escalationLevel={report.escalation_level ?? 0}
-          emailSentAt={report.email_sent_at ?? null}
-          rtiDraft={report.rti_draft ?? null}
-          resolvedAt={report.resolved_at ?? null}
-        />
+        <ErrorBoundary fallbackLabel="Accountability details unavailable">
+          <ParticipationLadder
+            status={report.status}
+            escalationLevel={report.escalation_level ?? 0}
+            emailSentAt={report.email_sent_at ?? null}
+            rtiDraft={report.rti_draft ?? null}
+            resolvedAt={report.resolved_at ?? null}
+          />
+          <CivicRecoursePanel />
+        </ErrorBoundary>
 
-        <CivicRecoursePanel />
+        {(report.status === 'open' || report.status === 'escalated') && (
+          <div style={{
+            background: '#0e1a15',
+            border: '1px solid rgba(212,168,67,0.3)',
+            borderRadius: 12, padding: 16, marginTop: 16,
+          }}>
+            <div style={{
+              color: '#d4a843', fontFamily: 'JetBrains Mono, monospace',
+              fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em',
+              marginBottom: 8,
+            }}>
+              Community
+            </div>
+            <div style={{ color: '#f0ede8', fontFamily: 'DM Sans, sans-serif', fontSize: 14, marginBottom: 12 }}>
+              {(report.upvote_count ?? 0) > 0
+                ? `${report.upvote_count} citizen${(report.upvote_count ?? 0) > 1 ? 's' : ''} corroborated this issue`
+                : 'Walked past this issue? Add your voice — it takes a GPS check, no photo.'}
+            </div>
+            <UpvoteButton
+              reportIdHuman={displayReportId}
+              reportLat={report.lat}
+              reportLng={report.lng}
+              currentUpvotes={report.upvote_count ?? 0}
+            />
+          </div>
+        )}
 
         {report.rti_draft && report.status === 'escalated' && (
           <div style={{

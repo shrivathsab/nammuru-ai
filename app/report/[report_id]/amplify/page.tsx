@@ -484,6 +484,9 @@ export default function AmplifyPage({ params }: PageProps) {
             wardName={data.wardName}
             whatsappRallyText={data.whatsappRallyText}
             tweetRallyText={data.tweetRallyText}
+            reportIdHuman={data.reportId}
+            reportLat={data.lat}
+            reportLng={data.lng}
           />
         </section>
       )}

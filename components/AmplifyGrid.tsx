@@ -364,7 +364,7 @@ export default function AmplifyGrid({
       <ChannelTile
         icon={<MessageCircle size={20} />}
         title={CITYWIDE.GENERAL_WA.name}
-        subtitle="General hotline · +91 9480685700"
+        subtitle="GBA helpline · +91 9480683695"
         responseTime={CITYWIDE.GENERAL_WA.responseTime}
         onClick={() => handleWhatsApp(CITYWIDE.GENERAL_WA, 'whatsapp_bbmp')}
         accentColor={WA_GREEN}

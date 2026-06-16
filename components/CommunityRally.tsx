@@ -1,5 +1,6 @@
 'use client';
 import { Users, TrendingUp } from 'lucide-react';
+import UpvoteButton from './UpvoteButton';
 
 interface CommunityRallyProps {
   clusterCount: number;
@@ -7,6 +8,12 @@ interface CommunityRallyProps {
   wardName: string;
   whatsappRallyText: string;
   tweetRallyText: string;
+  // Optional — when present, surfaces the GPS-verified UpvoteButton as the
+  // primary corroboration CTA.
+  reportIdHuman?: string;
+  reportLat?: number;
+  reportLng?: number;
+  currentUpvotes?: number;
 }
 
 export default function CommunityRally({
@@ -15,6 +22,10 @@ export default function CommunityRally({
   wardName,
   whatsappRallyText,
   tweetRallyText,
+  reportIdHuman,
+  reportLat,
+  reportLng,
+  currentUpvotes,
 }: CommunityRallyProps) {
   if (clusterCount <= 1) return null;
 
@@ -50,6 +61,17 @@ export default function CommunityRally({
           </div>
         </div>
       </div>
+
+      {reportIdHuman && reportLat != null && reportLng != null && (
+        <div style={{ marginTop: 14 }}>
+          <UpvoteButton
+            reportIdHuman={reportIdHuman}
+            reportLat={reportLat}
+            reportLng={reportLng}
+            currentUpvotes={currentUpvotes ?? 0}
+          />
+        </div>
+      )}
 
       <div className="cr-actions">
         <button type="button" className="cr-btn" onClick={openWhatsApp}>

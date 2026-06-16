@@ -151,6 +151,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       manual_location?: boolean;
     };
 
+    // CHECK 1B: Image size guard (server-side) — 5MB after base64 decode.
+    const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+    const base64Payload = image_base64.includes(',')
+      ? image_base64.slice(image_base64.indexOf(',') + 1)
+      : image_base64;
+    const imageBytes = Buffer.from(base64Payload, 'base64').length;
+    if (imageBytes > MAX_IMAGE_BYTES) {
+      return NextResponse.json(
+        {
+          is_valid: false,
+          rejection_reason: 'image_too_large',
+          user_message: 'Image too large. Please use a photo under 5MB.',
+        },
+        { status: 413 },
+      );
+    }
+
     // CHECK 2: Geofence
     if (!isInsideBengaluru(lat, lng)) {
       return NextResponse.json({
@@ -328,7 +345,6 @@ Validate and classify this image reported from ${locationDetails.locality}, Beng
     let claudeResult: ClaudeResult;
     try {
       const rawText = response.content[0].type === 'text' ? response.content[0].text : '';
-      console.log('Claude raw response:', rawText.substring(0, 200));
 
       // Strip markdown code blocks if present
       const cleanText = rawText

@@ -39,3 +39,27 @@ body {
   from { transform: translateX(100%); opacity: 0; }
   to   { transform: translateX(0);    opacity: 1; }
 }
+
+/* Swarm marker (Day 9) — gold pulsing ring on the live map */
+.swarm-marker {
+  background: transparent !important;
+  border: none !important;
+}
+.swarm-ring {
+  position: absolute;
+  width: 40px; height: 40px;
+  border: 3px solid #d4a843;
+  border-radius: 50%;
+  animation: swarmPulse 2s ease-out infinite;
+}
+.swarm-dot {
+  position: absolute;
+  width: 14px; height: 14px;
+  background: #d4a843;
+  border-radius: 50%;
+  top: 13px; left: 13px;
+}
+@keyframes swarmPulse {
+  0%   { transform: scale(0.8); opacity: 1; }
+  100% { transform: scale(2);   opacity: 0; }
+}
