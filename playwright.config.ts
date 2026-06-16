@@ -11,13 +11,15 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
-  // Auto-start the dev server locally; in CI it is started by the workflow.
-  webServer: process.env.CI
-    ? undefined
-    : {
-        command: 'npm run dev',
-        url: 'http://localhost:3000',
-        reuseExistingServer: true,
-        timeout: 60_000,
-      },
+  // Playwright owns the dev server in every environment — it starts it, waits
+  // for it to respond, and shuts it down. This is far more reliable in CI than
+  // backgrounding `npm run dev &` across separate workflow steps.
+  webServer: {
+    command: 'npm run dev',
+    url: 'http://localhost:3000',
+    reuseExistingServer: !process.env.CI,
+    timeout: 180_000, // cold Turbopack compile of the first route can be slow in CI
+    stdout: 'pipe',
+    stderr: 'pipe',
+  },
 });
